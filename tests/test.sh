@@ -49,6 +49,8 @@ check "continue-ledger: a focused session with open rows is sent to the next row
 check "continue-ledger: no progress since the last push lets the session stop" "[ \"\$(cl '{\"session_id\":\"s1\",\"cwd\":\"/tmp\",\"stop_hook_active\":true}')\" = '{}' ]"
 sed -i.bak 's/| me | todo |/| me | verified |/' "$CL/co/COMPANY.md"
 check "continue-ledger: only owner rows left lets the session stop" "[ \"\$(cl '{\"session_id\":\"s1\",\"cwd\":\"/tmp\"}')\" = '{}' ]"
+printf '| P9 | product | art | x | me | building (art agent) | | |\n' >> "$CL/co/COMPANY.md"
+check "continue-ledger: rows claimed by another worker are not this session's" "[ \"\$(cl '{\"session_id\":\"s1\",\"cwd\":\"/tmp\"}')\" = '{}' ]"
 check "continue-ledger: another session is never pushed" "[ \"\$(cl '{\"session_id\":\"s2\",\"cwd\":\"/tmp\"}')\" = '{}' ]"
 
 # 6. learn scripts

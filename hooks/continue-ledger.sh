@@ -25,7 +25,7 @@ for f in glob.glob(os.path.join(active, "dir-*.focus")):
 if not dirs:
     print("{}"); sys.exit(0)
 ROW = re.compile(r"^\|\s*([A-Z]{1,3}\d+|[A-Z][A-Za-z/ ]*:)")
-OPEN = re.compile(r"\|\s*(todo|building(?: \([^)|]*\))?)\s*\|")
+OPEN = re.compile(r"\|\s*(todo|building|building \(me\))\s*\|")  # rows claimed by another worker, "building (name)", are theirs
 key, root = dirs[0]
 ledgers = [f for name in ("COMPANY.md", "PORTFOLIO.md", "READINESS.md") for f in [os.path.join(root, name)] if os.path.isfile(f)]
 ledgers += sorted(glob.glob(os.path.join(root, "*", "READINESS.md")))
