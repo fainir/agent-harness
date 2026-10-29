@@ -20,7 +20,8 @@ mkdir -p .runtime/runs; lock=.runtime/run.lock; LOCK_MIN=$(( TIMEOUT / 60 )); [ 
 signature() { { cat "$ledger" OWNER.md 2>/dev/null; git rev-parse HEAD 2>/dev/null; ./signals.sh 2>/dev/null; } | cksum | cut -d' ' -f1; }
 gate=0; [ -x ./signals.sh ] && gate=1
 if [ "$gate" = 1 ] && [ "${FORCE:-0}" != 1 ] && [ -f .runtime/idle.sig ] && [ -z "$(find .runtime/idle.sig -mmin +1440 2>/dev/null)" ] \
-   && ! grep -qE '\|[[:space:]]*(todo|building|building \(me\))[[:space:]]*\|' "$ledger" && [ "$(signature)" = "$(cat .runtime/idle.sig)" ]; then
+   && ! grep -E '^\|[[:space:]]*([A-Z]{1,3}[0-9]+|[A-Z][A-Za-z/ ]*:)' "$ledger" | grep -qE '\|[[:space:]]*(todo|building|building \(me\))[[:space:]]*\|' \
+   && [ "$(signature)" = "$(cat .runtime/idle.sig)" ]; then  # rows are lines whose first cell is an ID, as in continue-ledger.sh
   echo "$(date +%Y%m%d-%H%M) $ledger idle: no buildable row and no change, model not run" >> .runtime/runs/summary.log; echo "idle: no change"; exit 0
 fi
 if [ -e "$lock" ] && [ -z "$(find "$lock" -mmin +"$LOCK_MIN" 2>/dev/null)" ]; then echo "busy: $lock is fresh, another run is on"; exit 0; fi

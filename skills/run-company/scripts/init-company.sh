@@ -87,9 +87,9 @@ put CLAUDE.md <<EOF
 EOF
 
 if [ -e .gitignore ]; then
-  grep -q '^\.runtime/\*\.lock' .gitignore 2>/dev/null || printf '\n.runtime/*.lock\n.runtime/ticks/\n.runtime/runs/\n.runtime/launchd.log\nqa/**/*.webm\n' >> .gitignore
+  grep -q '^\.runtime/\*\.lock' .gitignore 2>/dev/null || printf '\n.runtime/*.lock\n.runtime/ticks/\n.runtime/runs/\n.runtime/launchd.log\n.runtime/idle.sig\nqa/**/*.webm\n' >> .gitignore
 else
-  printf 'node_modules/\n.env\n.env.*\n!.env.example\n.runtime/*.lock\n.runtime/ticks/\n.runtime/runs/\n.runtime/launchd.log\nqa/**/*.webm\n' > .gitignore; echo "  create .gitignore"
+  printf 'node_modules/\n.env\n.env.*\n!.env.example\n.runtime/*.lock\n.runtime/ticks/\n.runtime/runs/\n.runtime/launchd.log\n.runtime/idle.sig\nqa/**/*.webm\n' > .gitignore; echo "  create .gitignore"
 fi
 
 [ -d .git ] || git rev-parse --git-dir >/dev/null 2>&1 || { git init -q && echo "  git init"; }
