@@ -60,7 +60,7 @@ Technical problems are work. Business problems are rows: no traffic → a growth
 
 ## 6. Cadence (recurring runs)
 
-- Build loop: every 2 to 4 hours while the stage is building or growing, installed by `scripts/schedule.sh` (launchd or cron running `scripts/run.sh`), independent of any open chat or app: section 3, time-boxed by its TIMEOUT. `schedule.sh --list` shows what runs; `--remove` pauses it.
+- Build loop: every 2 to 4 hours while the stage is building or growing, installed by `scripts/schedule.sh` (launchd or cron running `scripts/run.sh`), independent of any open chat or app: section 3, time-boxed by its TIMEOUT. `schedule.sh --list` shows what runs; `--remove` pauses it. Waiting on the owner costs no tokens: give the folder an executable `signals.sh` that prints its outside state (store health, order and message counts) and `run.sh` skips the model while no row is buildable and nothing changed, with one real run a day.
 - Daily ops at a fixed hour: `heartbeat.md` in this folder is the prompt (under 20 lines, never rewritten by a run). Claude Code: a scheduled task in the company folder with that prompt. Codex: an automation with that prompt on the `monitor` profile.
 - Weekly review, one run: Numbers vs targets, what moved them, keep / change / cut per track, three Decision lines; then the learn skill's review, one tested harness change from the week's notes. Monthly: close the money section.
 - Monitors for third parties (store review, payment provider, a human's deadline) run daily and say nothing when unchanged. Pause a run when the stage no longer needs it.

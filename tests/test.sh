@@ -77,6 +77,18 @@ check "size: the harness's own lines still fail the budget" "! HOME='$SZ/home' S
 printf '## rules\n' > "$T/norules.md"
 check "size: a skill missing from the rules block fails the budget" "! HOME='$T/nohome' SKILLS_DIR='$HERE/skills' HARNESS_RULES_FILE='$T/norules.md' bash '$HERE/skills/learn/scripts/size.sh' >/dev/null"
 
+# 6b2. run.sh idle gate: no model run when nothing is buildable and nothing changed
+IG="$T/ig"; mkdir -p "$IG/co" "$IG/bin"; printf '#!/bin/sh\necho run >> "%s/calls"\n' "$IG" > "$IG/bin/claude"; chmod +x "$IG/bin/claude"
+printf '| ID | Track | Action | Serves | Owner | Status | Due | Evidence |\n| P1 | product | x | y | me | owner | - | - |\n' > "$IG/co/COMPANY.md"
+printf '#!/bin/sh\ncat "%s/state"\n' "$IG" > "$IG/co/signals.sh"; chmod +x "$IG/co/signals.sh"; echo a > "$IG/state"
+igrun() { PATH="$IG/bin:$PATH" TIMEOUT=30 bash "$HERE/skills/run-company/scripts/run.sh" "$IG/co" >/dev/null 2>&1; }
+igrun; igrun
+check "run.sh idle gate: the second run with nothing new spends no model run" "[ \"\$(wc -l < '$IG/calls' | tr -d ' ')\" = 1 ]"
+echo b > "$IG/state"; igrun
+check "run.sh idle gate: a change in signals.sh wakes the model" "[ \"\$(wc -l < '$IG/calls' | tr -d ' ')\" = 2 ]"
+printf '| P2 | product | y | z | me | todo | - | - |\n' >> "$IG/co/COMPANY.md"; igrun; igrun
+check "run.sh idle gate: a buildable row always runs" "[ \"\$(wc -l < '$IG/calls' | tr -d ' ')\" = 4 ]"
+
 # 6c. per-project learning and cross-project promotion
 PN="$T/pn"; mkdir -p "$PN/a/sub" "$PN/b"; printf '# a\n\n## Rules\n\n- keep it small\n' > "$PN/a/AGENTS.md"; (cd "$PN/b" && git init -q)
 bash "$HERE/skills/learn/scripts/project-note.sh" "Node 24 rejects node --test tests/; pass a glob" "$PN/a/sub" >/dev/null

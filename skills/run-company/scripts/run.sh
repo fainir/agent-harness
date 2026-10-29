@@ -14,6 +14,15 @@ if [ "${CLAUDECODE:-}" = 1 ] && [ "${TICK_KEEP_ENV_AUTH:-0}" != 1 ]; then unset 
 ledger=""; for f in READINESS.md COMPANY.md PORTFOLIO.md; do [ -f "$f" ] && { ledger="$f"; break; }; done
 [ -n "$ledger" ] || { echo "no ledger (READINESS.md, COMPANY.md or PORTFOLIO.md) in $DIR" >&2; exit 1; }
 mkdir -p .runtime/runs; lock=.runtime/run.lock; LOCK_MIN=$(( TIMEOUT / 60 )); [ "$LOCK_MIN" -gt 0 ] || LOCK_MIN=1
+# Idle gate (opt-in: the folder has an executable signals.sh printing its outside state, such as store health and
+# order or message counts): with no buildable row and the same ledger, OWNER.md, git HEAD and signals as after the
+# last model run, skip the model and spend no tokens. A real run still happens at least once a day (FORCE=1 forces one).
+signature() { { cat "$ledger" OWNER.md 2>/dev/null; git rev-parse HEAD 2>/dev/null; ./signals.sh 2>/dev/null; } | cksum | cut -d' ' -f1; }
+gate=0; [ -x ./signals.sh ] && gate=1
+if [ "$gate" = 1 ] && [ "${FORCE:-0}" != 1 ] && [ -f .runtime/idle.sig ] && [ -z "$(find .runtime/idle.sig -mmin +1440 2>/dev/null)" ] \
+   && ! grep -qE '\|[[:space:]]*(todo|building|building \(me\))[[:space:]]*\|' "$ledger" && [ "$(signature)" = "$(cat .runtime/idle.sig)" ]; then
+  echo "$(date +%Y%m%d-%H%M) $ledger idle: no buildable row and no change, model not run" >> .runtime/runs/summary.log; echo "idle: no change"; exit 0
+fi
 if [ -e "$lock" ] && [ -z "$(find "$lock" -mmin +"$LOCK_MIN" 2>/dev/null)" ]; then echo "busy: $lock is fresh, another run is on"; exit 0; fi
 STAMP="$(date +%Y%m%d-%H%M)"; log=".runtime/runs/$STAMP.log"; echo "$STAMP $$" > "$lock"
 (
@@ -24,6 +33,7 @@ pid=$!
 dog=$!; disown "$dog" 2>/dev/null
 { wait "$pid"; rc=$?; } 2>/dev/null
 pkill -P "$dog" 2>/dev/null; kill "$dog" 2>/dev/null; rm -f "$lock"
+[ "$gate" = 1 ] && signature > .runtime/idle.sig
 printf '%s %s %s exit %s %s\n' "$STAMP" "$ledger" "$RUNNER" "$rc" "$log" >> .runtime/runs/summary.log
 ls -t .runtime/runs/*.log 2>/dev/null | tail -n +31 | xargs rm -f 2>/dev/null
 echo "== $ledger run $STAMP ($RUNNER, exit $rc) =="; tail -n 8 "$log"
