@@ -47,3 +47,13 @@ Other agents: point them at `~/.agents/skills` and paste `rules/harness.md` into
 Run `bash tests/test.sh` before a pull request. Keep the harness small: `learn/scripts/size.sh` enforces a size budget, and a change that grows it must pay for itself.
 
 MIT licensed.
+
+---
+
+### More open source by [Nir Feinstein](https://nirfeinste.in)
+
+- [frugal](https://github.com/fainir/frugal) - your agent finds the cheaper honest way before it pays for anything
+- [flipback](https://github.com/fainir/flipback) - an automatic `/goal` for every turn: sends Claude Code back when it stops early
+- [recall](https://github.com/fainir/recall) - your Claude Code memory in every agent, over MCP
+- [most-capable-agent-system-prompt](https://github.com/fainir/most-capable-agent-system-prompt) - the copy-paste prompt for a self-improving agent system
+- [All projects](https://nirfeinste.in/#open-source)
