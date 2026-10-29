@@ -1,6 +1,33 @@
-# agent-harness
+<h1 align="center">agent-harness</h1>
+
+<p align="center">
+  <em>Say what you want in plain words. Your coding agent sizes the job, finishes it, proves it,<br>and asks you for one thing at a time.</em>
+</p>
+
+<p align="center">
+  <a href="https://github.com/fainir/agent-harness/stargazers"><img src="https://img.shields.io/github/stars/fainir/agent-harness?style=flat&color=10b981" alt="GitHub stars"></a>
+  <a href="https://github.com/fainir/agent-harness/actions/workflows/test.yml"><img src="https://github.com/fainir/agent-harness/actions/workflows/test.yml/badge.svg" alt="Tests"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license"></a>
+  <img src="https://img.shields.io/badge/works%20with-Claude%20Code%20%C2%B7%20Codex-0f172a" alt="Works with Claude Code and Codex">
+</p>
 
 Skills, rules and hooks that turn a coding agent (Claude Code, Codex, or any agent that reads `AGENTS.md` and Agent Skills) into a product team, a CEO or a portfolio manager, depending on what you ask. You talk in plain words. The agent sizes the job, finishes it, verifies it with real evidence, and asks you only for what it truly cannot do, one exact action at a time.
+
+```bash
+git clone https://github.com/fainir/agent-harness ~/agent-harness && ~/agent-harness/install.sh
+```
+
+Then just talk to your agent. Every big job ends with a report in the same shape (format from the
+`run-company` skill):
+
+```
+> make the invoicer production ready
+
+Invoicer - launched. Rows: 23/25 verified, 1 owner, 1 waiting
+Done: checkout tested end to end (qa/checkout/), deployed and checked at its URL, phone and desktop screenshots
+NEEDS YOU (1 of 1): Stripe -> activate live mode -> unblocks real payments
+Next: app store screenshots, next run in 3 hours
+```
 
 ## What it does
 
