@@ -12,9 +12,12 @@ try:
 except Exception:
     print("")' 2>/dev/null || true)
 [ -f "$rules" ] && [ -n "$transcript" ] && [ -f "$transcript" ] || exit 0
-mtime() { stat -f %m "$1" 2>/dev/null || stat -c %Y "$1" 2>/dev/null || echo 0; }
-born() { stat -f %B "$1" 2>/dev/null || stat -c %W "$1" 2>/dev/null || echo 0; }  # 0 = birth time unknown
-r=$(mtime "$rules"); t=$(born "$transcript")
+if stat -c %Y / >/dev/null 2>&1; then  # GNU stat (Linux); BSD stat (macOS) has no -c
+  mtime() { stat -c %Y "$1"; }; born() { stat -c %W "$1"; }
+else
+  mtime() { stat -f %m "$1"; }; born() { stat -f %B "$1"; }
+fi
+r=$(mtime "$rules" 2>/dev/null || echo 0); t=$(born "$transcript" 2>/dev/null || echo 0)  # birth 0 = unknown
 [ "${t:-0}" != 0 ] || exit 0
 case "$r$t" in ''|*[!0-9]*) exit 0 ;; esac
 key=$(printf '%s' "$transcript" | cksum | cut -d' ' -f1); seen_file="${TMPDIR:-/tmp}/.harness-reload-$key"

@@ -28,7 +28,7 @@ check "nudge: silent when already continued" "[ -z \"\$(nudge '{\"stop_hook_acti
 # 4. rules-reload.sh
 printf '{}\n' > "$T/transcript.jsonl"; sleep 1; printf '# rules\n' > "$T/RULES.md"
 rr() { printf '{"transcript_path":"%s/transcript.jsonl"}' "$T" | HARNESS_RULES_FILE="$T/RULES.md" TMPDIR="$T" bash "$HERE/hooks/rules-reload.sh"; }
-if stat -f %B "$T/transcript.jsonl" >/dev/null 2>&1 || [ "$(stat -c %W "$T/transcript.jsonl" 2>/dev/null)" != 0 ]; then
+if { stat -c %W "$T/transcript.jsonl" 2>/dev/null || stat -f %B "$T/transcript.jsonl" 2>/dev/null; } | grep -qE "^[1-9][0-9]*$"; then
   check "rules reload: nudges once when rules changed after the chat began" "rr | grep -q 'changed after this chat started'"
   check "rules reload: silent the second time" "[ -z \"\$(rr)\" ]"
 else ok "rules reload: skipped (no file birth time on this filesystem)"; fi
