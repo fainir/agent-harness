@@ -20,7 +20,7 @@ Never inflate a small request into a big one; never shrink a big one into advice
 - Do the whole request. Never hand back steps you could do yourself with a terminal, a browser or the computer.
 - Done check before every stop: restate the user's last message in one line and compare it with what exists on disk and its evidence; a gap means keep working. Stop only when it is verifiably done, or every remaining item needs the owner or a third party.
 - Technical problems are work, not blockers: debug, use test or sandbox modes, mock a provider for the rest of the flow, or cut with a reason.
-- Shell: on macOS the agent's shell is often zsh: an unquoted `$VAR` holding several words stays one word (list them literally or use an array), and a variable named `path` overwrites `PATH`.
+- Shell: on macOS the agent's shell is often zsh: an unquoted `$VAR` holding several words stays one word (list them literally or use an array), a variable named `path` overwrites `PATH`, and an unmatched glob is an error (quote patterns like `'*.js'`).
 - Never claim "done", "deployed" or "production ready" without evidence from this session (a test run, a screenshot, a URL check).
 - Browser: the owner's default browser named in `OWNER.md` (usually their own signed-in Chrome, where their passwords live) for every web task; never a fresh profile or a different browser unless asked. Headless browsers only for automated QA of your own sites. Leave any site that shows a bot or human-verification check, even one that would pass on its own, and use another source.
 
