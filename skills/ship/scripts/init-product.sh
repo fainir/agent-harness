@@ -17,7 +17,8 @@ if [ ! -e READINESS.md ]; then
   echo "  create READINESS.md"
 else echo "  keep   READINESS.md"; fi
 
-if [ ! -e OWNER.md ]; then
+if [ -e ../OWNER.md ] || [ -e ../../OWNER.md ]; then echo "  skip   OWNER.md (the company or portfolio folder above has one)"
+elif [ ! -e OWNER.md ]; then
   sed -e "s/<Name>/$NAME/" "$SKILLS/owner-actions/OWNER.template.md" > OWNER.md
   echo "  create OWNER.md"
 else echo "  keep   OWNER.md"; fi
@@ -87,5 +88,5 @@ else
   printf 'node_modules/\n.env\n.env.*\n!.env.example\n.runtime/*.lock\nqa/**/*.webm\n' > .gitignore; echo "  create .gitignore"
 fi
 
-[ -d .git ] || { git init -q && echo "  git init"; }
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || { git init -q && echo "  git init"; }
 echo "done: $DIR"

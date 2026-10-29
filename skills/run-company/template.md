@@ -9,9 +9,9 @@ Statuses: todo | building (who) | verified | human (name) | owner | waiting | cu
 
 | KPI | Source | Now | Target | By | Updated |
 |---|---|---|---|---|---|
-| Paying customers | Stripe | 0 | 10 | YYYY-MM-DD | |
-| Signups per week | analytics | 0 | 50 | | |
-| MRR | Stripe | $0 | $500 | | |
+| <first money KPI: paying customers, paid orders or MRR> | <payment provider or store stats> | 0 | <target> | YYYY-MM-DD | |
+| <first demand KPI: signups, notify-me or leads per week> | <analytics or store stats> | 0 | <target> | | |
+| <revenue per month> | <payment provider> | $0 | <target> | | |
 
 ## Products
 
