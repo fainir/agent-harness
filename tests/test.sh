@@ -47,6 +47,19 @@ check "owner-log.sh counts asks by class" "LEARNINGS_DIR='$L' bash '$HERE/skills
 check "run-log.sh logs a run" "LEARNINGS_DIR='$L' bash '$HERE/skills/learn/scripts/run-log.sh' p claude 5 7 1 1 0 30 | grep -q 'logged run 1'"
 check "review.sh groups by root cause" "LEARNINGS_DIR='$L' bash '$HERE/skills/learn/scripts/review.sh' 2>/dev/null | grep -q ' 2  init script misses the dev command'"
 
+# 6b. probe.sh with a fake runner: blind labels, candidate in one run only, offline copies, source untouched
+P="$T/probe"; mkdir -p "$P/bin" "$P/task"
+(cd "$P/task" && git init -q && git remote add origin https://example.com/x.git && echo hi > README.md && git add -A && git -c user.email=t@t -c user.name=t commit -qm init && mkdir .vercel)
+printf '#!/bin/sh\ncand=no; for a in "$@"; do [ "$a" = "--append-system-prompt" ] && cand=yes; done\necho touched > out.txt\nprintf "{\\"result\\":\\"candidate=%%s remotes=%%s\\",\\"num_turns\\":2}\\n" "$cand" "$(git remote | wc -l | tr -d " ")"\n' > "$P/bin/claude"; chmod +x "$P/bin/claude"; echo "Always quote proof." > "$P/cand.md"
+PATH="$P/bin:$PATH" LEARNINGS_DIR="$P/l" PROBE_TIMEOUT=60 bash "$HERE/skills/learn/scripts/probe.sh" "$P/task" "do it" "$P/cand.md" >/dev/null 2>&1
+PD=$(ls -d "$P"/l/probes/* 2>/dev/null | head -1); ref=$(sed -n 's/^reference=//p' "$PD/key.txt" 2>/dev/null); can=$(sed -n 's/^candidate=//p' "$PD/key.txt" 2>/dev/null)
+check "probe: candidate text reaches only the candidate run" "grep -q 'candidate=yes' '$PD/$can/final.txt' && grep -q 'candidate=no' '$PD/$ref/final.txt'"
+check "probe: copies are offline and the source is untouched" "grep -q 'remotes=0' '$PD/$can/final.txt' && [ ! -e '$P/task/out.txt' ] && [ \"\$(git -C '$P/task' remote | wc -l | tr -d ' ')\" = 1 ]"
+check "probe: records what each run changed" "grep -q 'out.txt' '$PD/$can/changes.txt'"
+check "size: every skill is named in the rules block" "HOME='$T/nohome' SKILLS_DIR='$HERE/skills' HARNESS_RULES_FILE='$HERE/rules/harness.md' bash '$HERE/skills/learn/scripts/size.sh' >/dev/null"
+printf '## rules\n' > "$T/norules.md"
+check "size: a skill missing from the rules block fails the budget" "! HOME='$T/nohome' SKILLS_DIR='$HERE/skills' HARNESS_RULES_FILE='$T/norules.md' bash '$HERE/skills/learn/scripts/size.sh' >/dev/null"
+
 # 7. install, reinstall, uninstall in a throwaway HOME
 H="$T/home"; mkdir -p "$H/.claude" "$H/.codex"; printf '# my own rules\n' > "$H/.claude/CLAUDE.md"
 printf '{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"my-own-hook.sh"}]}]}}\n' > "$H/.claude/settings.json"

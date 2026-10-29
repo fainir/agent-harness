@@ -31,7 +31,8 @@ Never inflate a small request into a big one; never shrink a big one into advice
 ### Learn
 
 - A step that fails, is retried, improvised, or wrongly handed to the owner gets one `bash ~/.agents/skills/learn/scripts/note.sh` line as it happens; a big-job run ends with `run-log.sh` and a `Learned:` line.
-- The `learn` skill reviews the notes weekly and changes the harness one tested change at a time, keeping it only if verified rows hold and owner asks per run go down.
+- The `learn` skill reviews the notes weekly in the Harness² style: pick one recurring cause, propose up to two fixes, probe them against the current harness on the same real task (`learn/scripts/probe.sh`, blind A/B), then adopt, merge or keep the base, one tested change at a time, kept only if verified rows hold and owner asks per run go down.
+- Project facts (run, test, deploy and QA commands, quirks) go in the project's own `AGENTS.md` under `## Working here`, never in the shared skills.
 
 ### Writing
 

@@ -40,6 +40,7 @@ Phases 2 to 4 repeat per flow: build it, review it, QA it, next. Never build eve
 2. Existing project → run the same script in it (it never overwrites existing files), read README, package manifest, routes/screens, existing tests, deploy config, any old plan or ledger. Distill still-true facts into READINESS.md once; stop appending to old status files.
 3. Write `GOAL.md` (the script seeds it): the one-sentence goal, the done definition, the production surface, and the budget the owner gave (time, money, providers). Both tools' goal runners should be pointed at this sentence.
 4. Pick the stack: whatever the project already uses; for a new idea prefer the stack the owner's other products use (Next.js + Postgres on Railway, or the simplest thing that ships). Record it in PRODUCT.md. Do not ask.
+5. Keep a `## Working here` section in the project's `AGENTS.md` (its run, test, deploy and QA commands and quirks), updated whenever a step was improvised: project facts live there, never in the shared skills (learn skill, scope rule).
 
 ## Phase 2: build
 
