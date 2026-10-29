@@ -43,7 +43,7 @@ if mode == "add":
     judge = "claude" if tool == "claude" else "codex"
     want = {
         "UserPromptSubmit": ["bash \"%s/reply-budget.sh\"" % hooks],
-        "Stop": ["python3 -I \"%s/done-check.py\" --judge %s" % (hooks, judge), "bash \"%s/owner-action-nudge.sh\"" % hooks],
+        "Stop": ["python3 -I \"%s/done-check.py\" --judge %s" % (hooks, judge), "bash \"%s/owner-action-nudge.sh\"" % hooks, "bash \"%s/continue-ledger.sh\"" % hooks],
     }
     if tool == "claude":
         want["PostToolUse"] = ["bash \"%s/rules-reload.sh\"" % hooks]

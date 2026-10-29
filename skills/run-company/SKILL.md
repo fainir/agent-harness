@@ -32,7 +32,7 @@ Row rule: every row says what it serves (a KPI or a GOAL.md line). A row that se
 
 ## 3. The loop (every run)
 
-1. Read COMPANY.md, OWNER.md, GOAL.md. Refresh the Numbers.
+1. `bash ~/.agents/skills/run-company/scripts/focus.sh .` (this session keeps working through side requests until only owner, waiting, human or cut rows remain). Read COMPANY.md, OWNER.md, GOAL.md. Refresh the Numbers.
 2. Pick the highest-leverage row that is not verified, human, owner or waiting. Order: money coming in (collect, close, fix checkout), customers in pain (support, defects), growth measurable this week, product rows from READINESS.md, then ops. A row due today beats everything.
 3. Do it. Product rows: the ship loop in that product's folder. Growth and sales: real channels, real posts, real messages, inside OWNER.md. Support: the real inbox. Money: the real dashboards and invoices. People: the hire skill.
 4. Verify with evidence (URL, screenshot under qa/, message ID, dashboard number). No evidence, no verified.

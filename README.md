@@ -42,7 +42,7 @@ Next: app store screenshots, next run in 3 hours
 
 - **Done means verified.** Every row in a ledger needs evidence: a test, a screenshot at phone and desktop width, a URL check. A Stop hook (`done-check.py`) sends the agent back to work when the user's last request is not verifiably finished.
 - **One owner action at a time.** `OWNER.md` holds standing approvals (money caps, accounts, channels, decisions the agent makes alone). Inside them the agent acts; outside them it asks once: `NEEDS YOU (1 of 3): Stripe -> create the account -> unblocks checkout`. Moving money, signing, identity and new third-party accounts are always yours.
-- **It keeps running.** `run-company/scripts/schedule.sh` installs a background job (launchd on macOS, cron on Linux) that runs `continue` in a project every few hours, with no chat or app open.
+- **It keeps running.** A session that runs a company or product registers it (`focus.sh`), and a Stop hook (`continue-ledger.sh`) sends it back to the next open row after any side request, until only owner or waiting rows remain; a guard lets it stop when it makes no progress. Between chats, `run-company/scripts/schedule.sh` installs a background job (launchd on macOS, cron on Linux) that runs `continue` every hour or few hours with no chat or app open.
 - **It improves itself, at two levels.** Each project keeps its own lessons in its `AGENTS.md` (`project-note.sh`), so the next run there starts smarter; lessons that recur across projects are promoted into the shared skills.
 - **Self-review loop.** Every friction and every owner ask is logged. A weekly review (`learn` skill) follows the propose, probe, compose loop of [Harness²](https://arxiv.org/abs/2610.14224): it picks one recurring cause, proposes up to two fixes, runs the current harness and the candidate side by side on the same real task in offline copies (`probe.sh`, judged blind), and adopts, merges or keeps the base. Kept changes form an experience library (`applied.md`) that later reviews reuse; a change stays only if verified rows hold and owner asks per run go down.
 - **Short answers.** The closing message answers your last message and nothing else; a hook sizes it to what you wrote.
@@ -61,7 +61,7 @@ Other agents: point them at `~/.agents/skills` and paste `rules/harness.md` into
 
 - `skills/` - `ship`, `production-ready`, `product-spec`, `ux-ui-review`, `qa-flows`, `release-gates`, `owner-actions`, `run-company`, `portfolio`, `hire`, `learn`. Each is a `SKILL.md` plus scripts and templates.
 - `rules/harness.md` - the rules block the installer adds: size the job, finish it, the owner protocol, learning, writing.
-- `hooks/` - `done-check.py` (Stop, Claude and Codex), `reply-budget.sh` (UserPromptSubmit), `owner-action-nudge.sh` (Stop, one owner action and a missing-schedule warning), `rules-reload.sh` (PostToolUse, Claude).
+- `hooks/` - `done-check.py` (Stop, Claude and Codex), `continue-ledger.sh` (Stop: keep a focused session on its next open row), `reply-budget.sh` (UserPromptSubmit), `owner-action-nudge.sh` (Stop, one owner action and a missing-schedule warning), `rules-reload.sh` (PostToolUse, Claude).
 - `tests/test.sh` - offline tests for every hook, the learn scripts and a full install and uninstall cycle in a throwaway home.
 
 ## Limits, honestly

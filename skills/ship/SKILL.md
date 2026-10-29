@@ -19,7 +19,7 @@ Input: `/ship <idea>` or `/ship <path or repo>` or a goal in plain words. Output
 
 ## Phases
 
-Run them in order the first time; afterwards loop on READINESS.md rows (production-ready skill).
+Run them in order the first time; afterwards loop on READINESS.md rows (production-ready skill). Start every run with `bash ~/.agents/skills/run-company/scripts/focus.sh .` so side requests never end the job.
 
 | # | Phase | Skill | Done when |
 |---|---|---|---|

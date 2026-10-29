@@ -40,6 +40,17 @@ check "done check: NEEDS YOU passes" "[ \"\$(dc '{\"last_assistant_message\":\"B
 check "done check: short answer, nothing changed, passes" "[ \"\$(dc '{\"last_assistant_message\":\"Yes, it is ready.\",\"cwd\":\"'$T'\"}')\" = '{}' ]"
 check "done check: recursion guard" "[ \"\$(printf '{}' | DONE_CHECK=1 python3 -I '$HERE/hooks/done-check.py')\" = '{}' ]"
 
+# 5b. continue-ledger.sh: a focused session goes on while rows are open, with a no-progress guard
+CL="$T/cl"; mkdir -p "$CL/co"; printf '| ID | Track | Action | Serves | Owner | Status | Due | Evidence |\n|---|---|---|---|---|---|---|---|\n| G4 | growth | Free checklist | x | me | todo | | |\n| A1 | admin | Tax | x | owner | owner | | |\n' > "$CL/co/COMPANY.md"
+cl() { printf '%s' "$1" | HARNESS_ACTIVE_DIR="$CL/active" bash "$HERE/hooks/continue-ledger.sh" 2>/dev/null; }
+check "continue-ledger: silent for a session that is not running a job" "[ \"\$(cl '{\"session_id\":\"s1\",\"cwd\":\"/tmp\"}')\" = '{}' ]"
+CLAUDE_CODE_SESSION_ID=s1 HARNESS_ACTIVE_DIR="$CL/active" bash "$HERE/skills/run-company/scripts/focus.sh" "$CL/co" >/dev/null
+check "continue-ledger: a focused session with open rows is sent to the next row" "cl '{\"session_id\":\"s1\",\"cwd\":\"/tmp\"}' | grep -q 'next: G4'"
+check "continue-ledger: no progress since the last push lets the session stop" "[ \"\$(cl '{\"session_id\":\"s1\",\"cwd\":\"/tmp\",\"stop_hook_active\":true}')\" = '{}' ]"
+sed -i.bak 's/| me | todo |/| me | verified |/' "$CL/co/COMPANY.md"
+check "continue-ledger: only owner rows left lets the session stop" "[ \"\$(cl '{\"session_id\":\"s1\",\"cwd\":\"/tmp\"}')\" = '{}' ]"
+check "continue-ledger: another session is never pushed" "[ \"\$(cl '{\"session_id\":\"s2\",\"cwd\":\"/tmp\"}')\" = '{}' ]"
+
 # 6. learn scripts
 L="$T/learnings"
 check "note.sh counts a repeated root cause" "LEARNINGS_DIR='$L' bash '$HERE/skills/learn/scripts/note.sh' p qa 'x' 'init script misses the dev command' 'fix' >/dev/null && LEARNINGS_DIR='$L' bash '$HERE/skills/learn/scripts/note.sh' p2 qa 'y' 'init script misses the dev command' 'fix' | grep -q 'seen 2 times'"
@@ -75,7 +86,7 @@ inst() { HOME="$H" bash "$HERE/install.sh" "$@" >/dev/null 2>&1; }
 inst; inst
 check "install: skills linked for every tool" "[ -L '$H/.agents/skills/ship' ] && [ -L '$H/.claude/skills/learn' ] && [ -L '$H/.codex/skills/run-company' ]"
 check "install: one rules block after two installs" "[ \"\$(grep -c 'agent-harness:start' '$H/.claude/CLAUDE.md')\" = 1 ] && grep -q 'my own rules' '$H/.claude/CLAUDE.md'"
-check "install: hooks added once, user hooks kept" "python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1]))[\"hooks\"]; s=json.dumps(d); sys.exit(0 if s.count(\"done-check.py\")==1 and \"my-own-hook.sh\" in s and \"UserPromptSubmit\" in d else 1)' '$H/.claude/settings.json'"
+check "install: hooks added once, user hooks kept" "python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1]))[\"hooks\"]; s=json.dumps(d); sys.exit(0 if s.count(\"done-check.py\")==1 and s.count(\"continue-ledger.sh\")==1 and \"my-own-hook.sh\" in s and \"UserPromptSubmit\" in d else 1)' '$H/.claude/settings.json'"
 check "install: codex hooks.json written" "grep -q -- '--judge codex' '$H/.codex/hooks.json'"
 inst --uninstall
 check "uninstall: links, block and our hooks removed, user content kept" "[ ! -e '$H/.agents/skills/ship' ] && ! grep -q 'agent-harness:start' '$H/.claude/CLAUDE.md' && grep -q 'my own rules' '$H/.claude/CLAUDE.md' && ! grep -q 'done-check' '$H/.claude/settings.json' && grep -q 'my-own-hook.sh' '$H/.claude/settings.json'"

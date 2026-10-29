@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Schedule run.sh for a folder so the harness keeps working when no chat and no app is open.
 # macOS: a LaunchAgent com.harness.<folder> (runs while the user is logged in). Linux: a crontab line.
-# Usage: schedule.sh <dir> [hours]     install or update, default every 3 hours (RUNNER=claude|codex)
+# Usage: schedule.sh <dir> [hours]     install or update, default every 3 hours (RUNNER=claude|codex, TIMEOUT=seconds per run, default 2400)
 #        schedule.sh --remove <dir>    remove the schedule
 #        schedule.sh --list            show harness schedules
 set -euo pipefail
@@ -38,7 +38,7 @@ if [ "$(uname)" = Darwin ]; then
   <key>ProgramArguments</key><array><string>/bin/bash</string><string>$RUN</string><string>$DIR</string></array>
   <key>StartInterval</key><integer>$(( HOURS * 3600 ))</integer>
   <key>RunAtLoad</key><false/>
-  <key>EnvironmentVariables</key><dict><key>PATH</key><string>$PATHS</string><key>RUNNER</key><string>$RUNNER</string><key>HOME</key><string>$HOME</string></dict>
+  <key>EnvironmentVariables</key><dict><key>PATH</key><string>$PATHS</string><key>RUNNER</key><string>$RUNNER</string><key>HOME</key><string>$HOME</string><key>TIMEOUT</key><string>${TIMEOUT:-2400}</string></dict>
   <key>StandardOutPath</key><string>$DIR/.runtime/launchd.log</string>
   <key>StandardErrorPath</key><string>$DIR/.runtime/launchd.log</string>
 </dict></plist>
@@ -47,7 +47,7 @@ EOF
   launchctl bootstrap "gui/$(id -u)" "$P"
   echo "scheduled $L: $RUNNER runs 'continue' in $DIR every ${HOURS}h, log $DIR/.runtime/launchd.log. Remove: schedule.sh --remove $DIR"
 else
-  line="0 */$HOURS * * * PATH=$PATHS RUNNER=$RUNNER /bin/bash $RUN $DIR >> $DIR/.runtime/launchd.log 2>&1 # harness run.sh $DIR"
+  line="0 */$HOURS * * * PATH=$PATHS RUNNER=$RUNNER TIMEOUT=${TIMEOUT:-2400} /bin/bash $RUN $DIR >> $DIR/.runtime/launchd.log 2>&1 # harness run.sh $DIR"
   (crontab -l 2>/dev/null | grep -v "harness run.sh $DIR"; echo "$line") | crontab -
   echo "scheduled cron: $line"
 fi
