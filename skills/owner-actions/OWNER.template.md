@@ -11,6 +11,9 @@ The agent acts on its own inside these limits and asks for one exact action (NEE
 ## Accounts the agent may use (through saved sign-ins or a credentials tool)
 - (service - what it may do there, for example "Resend - send transactional email", "Railway - deploy and set variables")
 
+## Browser
+- Default browser for anything on the web: (for example "my personal Chrome, through Claude in Chrome or the Codex Chrome extension"). The agent never signs in from a fresh browser or profile; headless browsers only for automated QA of our own sites.
+
 ## Public and outbound
 - May post publicly as the company on: (none)
 - May message people as the company on: (none) - always signed as the company, never as the owner personally

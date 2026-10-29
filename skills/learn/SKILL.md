@@ -5,7 +5,7 @@ description: Make the harness improve itself from real runs. Captures friction w
 
 # learn - the harness improves itself
 
-Two halves: capture (every run, seconds) and review (weekly or on request, one change at a time). State lives in `~/.agents/learnings/` (inbox.md, runs.log, owner-actions.log, applied.md, probes/), never in chat history. The review follows Harness² (arXiv 2610.14224): propose, probe, compose, with applied.md as the experience library.
+Two levels, like Harness²: each project improves its own harness on every run (its `AGENTS.md` `## Working here`, its own scripts), and the shared harness improves in the weekly review from what recurs across projects. Two halves: capture (every run, seconds) and review (weekly or on request, one change at a time). State lives in `~/.agents/learnings/` (inbox.md, runs.log, owner-actions.log, applied.md, probes/), never in chat history. The review follows Harness² (arXiv 2610.14224): propose, probe, compose, with applied.md as the experience library.
 
 ## 1. Capture (every big-job run)
 
@@ -14,11 +14,11 @@ Two halves: capture (every run, seconds) and review (weekly or on request, one c
   Phases: spec, build, ux, qa, gates, deploy, report, company, portfolio, hire, tool. The script says how often that root cause was seen.
 - Every NEEDS YOU: `bash ~/.agents/skills/learn/scripts/owner-log.sh <project> <class> "<what>" "<how to never ask this again>"`.
 - End of run: `bash ~/.agents/skills/learn/scripts/run-log.sh <project> <claude|codex> <verified> <total> <defects> <owner-actions> <reruns> <minutes> ["<note>"]`, and the report's last line is `Learned: <one line, or none>`.
-- Learnings are about the harness, not the product. Product defects are READINESS rows. Facts about one project (its run, test, deploy and QA commands, its quirks) go straight into that project's `AGENTS.md` under `## Working here`, not into the inbox.
+- Learnings are about the harness, not the product. Product defects are READINESS rows. Facts about one project (its run, test, deploy and QA commands, its quirks, a step that had to be improvised there) go straight into that project's harness: `bash ~/.agents/skills/learn/scripts/project-note.sh "<one line>"` from the project folder; a repeated multi-step procedure becomes a script in the project's `scripts/`.
 
 ## 2. Review: propose, probe, compose
 
-1. `bash ~/.agents/skills/learn/scripts/review.sh` prints open learnings grouped by root cause, owner asks by class, runs per tool, the last applied changes and the size budget. Read `applied.md` first: reuse what was kept, never re-propose what was reverted.
+1. `bash ~/.agents/skills/learn/scripts/review.sh` prints open learnings grouped by root cause, owner asks by class, runs per tool, project lessons that recur in two or more projects (promote them into the shared harness and delete the project copies), the last applied changes and the size budget. Read `applied.md` first: reuse what was kept, never re-propose what was reverted.
 2. Pick ONE cause: the most rows, the top owner-ask class, or the one that cost a whole run. Evidence rule: every edit traces to a recorded moment; if you cannot name the moment, the edit is speculation. One sighting is noise unless it cost a run or an owner ask.
 3. Scope it. Invariant (how any agent plans, uses tools, manages context, delegates, verifies, asks the owner) goes to the shared harness. Domain (one project's facts and procedures) goes to that project's `AGENTS.md`. Never put project facts in shared skills.
 4. Propose up to two candidates, each a concrete diff at the cheapest enforcing level: a hook or script that makes the mistake impossible, then a script default, then one sentence in the step where it happened, then a rule line. Replace or delete text before adding. Keeping the base is always a candidate. For an owner-ask class the candidates are what removes the ask: a standing rule proposed in OWNER.md, a saved sign-in, a default the agent decides alone, a test mode, a template, a hire.

@@ -21,6 +21,7 @@ Never inflate a small request into a big one; never shrink a big one into advice
 - Done check before every stop: restate the user's last message in one line and compare it with what exists on disk and its evidence; a gap means keep working. Stop only when it is verifiably done, or every remaining item needs the owner or a third party.
 - Technical problems are work, not blockers: debug, use test or sandbox modes, mock a provider for the rest of the flow, or cut with a reason.
 - Never claim "done", "deployed" or "production ready" without evidence from this session (a test run, a screenshot, a URL check).
+- Browser: the owner's default browser named in `OWNER.md` (usually their own signed-in Chrome, where their passwords live) for every web task; never a fresh profile or a different browser unless asked. Headless browsers only for automated QA of your own sites.
 
 ### The owner
 
@@ -30,9 +31,9 @@ Never inflate a small request into a big one; never shrink a big one into advice
 
 ### Learn
 
-- A step that fails, is retried, improvised, or wrongly handed to the owner gets one `bash ~/.agents/skills/learn/scripts/note.sh` line as it happens; a big-job run ends with `run-log.sh` and a `Learned:` line.
+- Two levels. A lesson about this project goes into its own `AGENTS.md` `## Working here` (`bash ~/.agents/skills/learn/scripts/project-note.sh "<line>"`), so the next run there starts with it. A lesson about how agents work, a failed or improvised step, or an ask the owner should not have needed gets one `note.sh` line as it happens; a big-job run ends with `run-log.sh` and a `Learned:` line.
 - The `learn` skill reviews the notes weekly in the Harness² style: pick one recurring cause, propose up to two fixes, probe them against the current harness on the same real task (`learn/scripts/probe.sh`, blind A/B), then adopt, merge or keep the base, one tested change at a time, kept only if verified rows hold and owner asks per run go down.
-- Project facts (run, test, deploy and QA commands, quirks) go in the project's own `AGENTS.md` under `## Working here`, never in the shared skills.
+- The weekly review promotes project lessons that recur in two or more projects into the shared harness; project facts never go into the shared skills.
 
 ### Writing
 

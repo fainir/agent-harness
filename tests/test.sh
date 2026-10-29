@@ -60,6 +60,14 @@ check "size: every skill is named in the rules block" "HOME='$T/nohome' SKILLS_D
 printf '## rules\n' > "$T/norules.md"
 check "size: a skill missing from the rules block fails the budget" "! HOME='$T/nohome' SKILLS_DIR='$HERE/skills' HARNESS_RULES_FILE='$T/norules.md' bash '$HERE/skills/learn/scripts/size.sh' >/dev/null"
 
+# 6c. per-project learning and cross-project promotion
+PN="$T/pn"; mkdir -p "$PN/a/sub" "$PN/b"; printf '# a\n\n## Rules\n\n- keep it small\n' > "$PN/a/AGENTS.md"; (cd "$PN/b" && git init -q)
+bash "$HERE/skills/learn/scripts/project-note.sh" "Node 24 rejects node --test tests/; pass a glob" "$PN/a/sub" >/dev/null
+check "project-note: writes into the project's Working here, not the shared harness" "grep -A3 '^## Working here' '$PN/a/AGENTS.md' | grep -q 'Node 24 rejects' && grep -q '^- keep it small' '$PN/a/AGENTS.md'"
+check "project-note: does not add the same lesson twice" "bash '$HERE/skills/learn/scripts/project-note.sh' 'Node 24 rejects node --test tests/; pass a glob' '$PN/a' | grep -q 'already in' && [ \"\$(grep -c 'Node 24 rejects' '$PN/a/AGENTS.md')\" = 1 ]"
+bash "$HERE/skills/learn/scripts/project-note.sh" "Node 24 rejects node --test with a bare directory" "$PN/b" >/dev/null
+check "review: a lesson in two projects is a promotion candidate" "PROJECT_ROOTS='$PN' LEARNINGS_DIR='$T/l2' bash '$HERE/skills/learn/scripts/review.sh' 2>/dev/null | grep -q ' 2  Node 24 rejects'"
+
 # 7. install, reinstall, uninstall in a throwaway HOME
 H="$T/home"; mkdir -p "$H/.claude" "$H/.codex"; printf '# my own rules\n' > "$H/.claude/CLAUDE.md"
 printf '{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"my-own-hook.sh"}]}]}}\n' > "$H/.claude/settings.json"
