@@ -70,6 +70,10 @@ check "probe: candidate text reaches only the candidate run" "grep -q 'candidate
 check "probe: copies are offline and the source is untouched" "grep -q 'remotes=0' '$PD/$can/final.txt' && [ ! -e '$P/task/out.txt' ] && [ \"\$(git -C '$P/task' remote | wc -l | tr -d ' ')\" = 1 ]"
 check "probe: records what each run changed" "grep -q 'out.txt' '$PD/$can/changes.txt'"
 check "size: every skill is named in the rules block" "HOME='$T/nohome' SKILLS_DIR='$HERE/skills' HARNESS_RULES_FILE='$HERE/rules/harness.md' bash '$HERE/skills/learn/scripts/size.sh' >/dev/null"
+SZ="$T/sz"; mkdir -p "$SZ/home/.codex" "$SZ/skills"; { printf '<!-- other:start -->\n'; seq 1 20; printf '<!-- other:end -->\n'; seq 1 70; } > "$SZ/home/.codex/AGENTS.md"
+check "size: lines in another tool's marker block are reported, not budgeted" "HOME='$SZ/home' SKILLS_DIR='$SZ/skills' bash '$HERE/skills/learn/scripts/size.sh' | grep -q '^ok .* 70/80.*(+22 managed)'"
+seq 1 90 >> "$SZ/home/.codex/AGENTS.md"
+check "size: the harness's own lines still fail the budget" "! HOME='$SZ/home' SKILLS_DIR='$SZ/skills' bash '$HERE/skills/learn/scripts/size.sh' >/dev/null"
 printf '## rules\n' > "$T/norules.md"
 check "size: a skill missing from the rules block fails the budget" "! HOME='$T/nohome' SKILLS_DIR='$HERE/skills' HARNESS_RULES_FILE='$T/norules.md' bash '$HERE/skills/learn/scripts/size.sh' >/dev/null"
 
