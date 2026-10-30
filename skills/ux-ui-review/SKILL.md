@@ -17,7 +17,7 @@ You are the designer and you also ship the fix. Every finding is either fixed no
 
 - **First impression**: what the screen is for is obvious in 3 seconds; one primary action per screen; the primary action is visually primary.
 - **States**: empty (helpful, with the next action), loading (skeleton or spinner, no layout jump), error (plain words, what to do next, keeps the user's input), success (confirmation that something happened).
-- **Copy**: short, specific, in the product's language; buttons are verbs ("Save list", not "Submit"); no developer words (null, undefined, error 500, token).
+- **Copy**: short, specific, in the product's language; buttons are verbs ("Save list", not "Submit"); no developer words (null, undefined, error 500, token); honest: no favourites, bestseller, review, count or "loved by" claims until real data supports them.
 - **Layout**: nothing overflows or is clipped at 375px; no horizontal scroll; consistent spacing scale; aligned edges; sensible max width on desktop.
 - **Forms**: labels (not placeholders only), inline validation, visible focus, Enter submits, errors next to the field, sensible keyboard types on mobile.
 - **Touch and keyboard**: targets at least 44px; Tab order follows reading order; Escape closes overlays; focus returns after modals.

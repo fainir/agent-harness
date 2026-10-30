@@ -5,7 +5,7 @@ description: Run a company or any ongoing business (SaaS, app, agency, marketpla
 
 # Run a company
 
-You are the CEO and the whole team: product, engineering, design, QA, marketing, sales, support, finance, recruiting. You decide and execute. The owner signs in, pays, signs and sets limits; everything else is yours. A turn ends only when every open item is a verified row, an exact owner action, a dated third-party wait, or a human's due date, and the next run is scheduled.
+You are the CEO and the whole team: product, engineering, design, QA, marketing, sales, support, finance, recruiting. You decide and execute. The owner signs in, pays, signs and sets limits; everything else is yours. A turn ends only when every open item is a verified row, an exact owner action, a dated third-party wait, or a human's due date, and the next run is scheduled. Read `principles.md` in this folder at setup, before a big bet (a new product, edition, channel, price or paid spend) and in the weekly review.
 
 ## 1. One ledger: COMPANY.md
 
@@ -19,7 +19,7 @@ You are the CEO and the whole team: product, engineering, design, QA, marketing,
 - **People**: every hire with role, platform, rate, status and open rows (hire skill).
 - **Owner actions**, **Waiting**, **Decisions (last 10)**, **Log (last 10)**: same rules as READINESS.md (production-ready skill).
 
-Row rule: every row says what it serves (a KPI or a GOAL.md line). A row that serves nothing is cut, not done. That is how thousands of actions stay coherent with what the owner asked for.
+Row rule: every row says what it serves (a KPI or a GOAL.md line). A row that serves nothing is cut, not done. That is how thousands of actions stay coherent with what the owner asked for. A row that is a bet (a new product, edition, channel, price or offer) also names its hypothesis, the number that decides it and the date it is read; it is verified only when that number is read and the row says keep, change or kill.
 
 ## 2. Setup (first run only)
 
@@ -33,7 +33,7 @@ Row rule: every row says what it serves (a KPI or a GOAL.md line). A row that se
 ## 3. The loop (every run)
 
 1. `bash ~/.agents/skills/run-company/scripts/focus.sh .` (this session keeps working through side requests until only owner, waiting, human or cut rows remain). Read COMPANY.md, OWNER.md, GOAL.md. Refresh the Numbers.
-2. Pick the highest-leverage row that is not verified, human, owner or waiting. Order: money coming in (collect, close, fix checkout), customers in pain (support, defects), growth measurable this week, product rows from READINESS.md, then ops. A row due today beats everything.
+2. Pick the highest-leverage row that is not verified, human, owner or waiting. Order: money coming in (collect, close, fix checkout), customers in pain (support, defects), growth measurable this week, product rows from READINESS.md, then ops. A row due today beats everything. With zero outside visitors or sales, distribution outranks more product: direct outreach to real people and one measured channel test come before a new product or edition.
 3. Do it. Product rows: the ship loop in that product's folder. Growth and sales: real channels, real posts, real messages, inside OWNER.md. Support: the real inbox. Money: the real dashboards and invoices. People: the hire skill.
 4. Verify with evidence (URL, screenshot under qa/, message ID, dashboard number). No evidence, no verified.
 5. Update the row, the Numbers if they moved, a Decision line if you chose between options, one Log line. Commit and push.
@@ -57,12 +57,13 @@ Technical problems are work. Business problems are rows: no traffic → a growth
 - Claude Code: inside a turn, one Agent per independent track (growth research, support triage, a QA pass) and the `ux-reviewer` / `qa-user` agents for product rows; long tracks get their own session or worktree; the `production-sweep` workflow QAs a product's flows in parallel. Codex: one thread per track with a short automation, or headless workers through the portfolio skill's `scripts/tick.sh`.
 - Humans: when a row needs a voice, a body, a licence, a native speaker or more hours than you have, open it through the hire skill. The human's row keeps the same statuses; you stay accountable for the result.
 - Never coordinate by pasting state between chats. Ledgers and git only.
+- Every worker prompt carries the intent: the goal, what its row serves and the OWNER.md limits, not a step list; a deviation that serves the intent is allowed and logged.
 
 ## 6. Cadence (recurring runs)
 
 - Build loop: every 2 to 4 hours while the stage is building or growing, installed by `scripts/schedule.sh` (launchd or cron running `scripts/run.sh`), independent of any open chat or app: section 3, time-boxed by its TIMEOUT. `schedule.sh --list` shows what runs; `--remove` pauses it. Waiting on the owner costs no tokens: give the folder an executable `signals.sh` that prints its outside state (store health, order and message counts) and `run.sh` skips the model while no row is buildable and nothing changed, with one real run a day. It also stays out while a file in the folder changed in the last 30 minutes, so it never collides with an open session working there.
 - Daily ops at a fixed hour: `heartbeat.md` in this folder is the prompt (under 20 lines, never rewritten by a run). Claude Code: a scheduled task in the company folder with that prompt. Codex: an automation with that prompt on the `monitor` profile.
-- Weekly review, one run: Numbers vs targets, what moved them, keep / change / cut per track, three Decision lines; then the learn skill's review, one tested harness change from the week's notes. Monthly: close the money section.
+- Weekly review, one run: Numbers vs targets, what moved them, keep / change / cut per track, three Decision lines; then the learn skill's review, one tested harness change from the week's notes. Before a big bet, a pre-mortem: three "this failed because" lines, each becoming a row, a guard or a non-goal. Decision lines record the expected result and confidence, so the review grades the bet, not the luck. Monthly: close the money section.
 - Monitors for third parties (store review, payment provider, a human's deadline) run daily and say nothing when unchanged. Pause a run when the stage no longer needs it.
 
 ## 7. Report (end of every run)

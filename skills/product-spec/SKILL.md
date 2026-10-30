@@ -9,6 +9,7 @@ Output: `PRODUCT.md` (under 150 lines) and the `## Flows` table of `READINESS.md
 
 ## PRODUCT.md sections
 
+0. **Press release** (working backwards): five sentences a customer would read on launch day (who, the problem, what changes for them, a quote, how to start) and the three hardest FAQ answers. If it does not convince, change the product before writing flows.
 1. **One line**: `<product> helps <who> <do the job> without <the pain>.`
 2. **Who**: the first user, in one paragraph. If the owner is the first user, say so.
 3. **Core job**: the one thing the product must do well. Everything else is secondary.
@@ -24,6 +25,7 @@ Output: `PRODUCT.md` (under 150 lines) and the `## Flows` table of `READINESS.md
 
 - Existing project: derive flows from the code (routes, screens, commands, webhooks, emails, settings), README and old plans. Do not invent features the code does not have; do add missing unhappy paths.
 - A flow is worth a row only if a user would notice it missing or broken.
+- Before the first build row, a pre-mortem: three "this failed because" lines, each becoming a flow, a release gate or a non-goal.
 - Order rows by value: core job, money, sign up/onboarding, data safety, everything else. That order is the build order.
 - Write the READINESS rows now: `| F1 | <flow> | <surfaces> | todo | | |`.
 - Keep user-facing copy in the product's language (Hebrew products stay Hebrew; English default otherwise).
