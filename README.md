@@ -61,7 +61,7 @@ Other agents: point them at `~/.agents/skills` and paste `rules/harness.md` into
 
 - `skills/` - `ship`, `production-ready`, `product-spec`, `ux-ui-review`, `qa-flows`, `release-gates`, `owner-actions`, `run-company`, `portfolio`, `hire`, `learn`. Each is a `SKILL.md` plus scripts and templates.
 - `rules/harness.md` - the rules block the installer adds: size the job, finish it, the owner protocol, learning, writing.
-- `hooks/` - `done-check.py` (Stop, Claude and Codex), `continue-ledger.sh` (Stop: keep a focused session on its next open row), `reply-budget.sh` (UserPromptSubmit), `owner-action-nudge.sh` (Stop, one owner action and a missing-schedule warning), `rules-reload.sh` (PostToolUse, Claude).
+- `hooks/` - `done-check.py` (Stop, Claude and Codex), `continue-ledger.sh` (Stop: keep a focused session on its next open row), `reply-budget.sh` (UserPromptSubmit), `owner-action-nudge.sh` (Stop, one owner action and a missing-schedule warning), `rules-reload.sh` (PostToolUse, Claude), `zsh-guard.sh` (PreToolUse on Bash, Claude: when the shell is zsh, blocks a variable named `path`, an unsplit `$VAR` list, an unquoted URL with `?` and an unquoted `--include=*` glob, with the fix).
 - `tests/test.sh` - offline tests for every hook, the learn scripts and a full install and uninstall cycle in a throwaway home.
 
 ## Limits, honestly

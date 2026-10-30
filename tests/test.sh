@@ -78,6 +78,16 @@ check "size: the harness's own lines still fail the budget" "! HOME='$SZ/home' S
 printf '## rules\n' > "$T/norules.md"
 check "size: a skill missing from the rules block fails the budget" "! HOME='$T/nohome' SKILLS_DIR='$HERE/skills' HARNESS_RULES_FILE='$T/norules.md' bash '$HERE/skills/learn/scripts/size.sh' >/dev/null"
 
+# 6b1. zsh-guard.sh: blocks the zsh traps, never a quoted string or a heredoc body
+zg() { python3 -c 'import json,sys; print(json.dumps({"tool_name":"Bash","tool_input":{"command":sys.argv[1]}}))' "$1" | SHELL=/bin/zsh bash "$HERE/hooks/zsh-guard.sh" >/dev/null 2>&1; echo $?; }
+check "zsh-guard: blocks a loop variable named path" "[ \"\$(zg 'for path in a b; do echo x; done')\" = 2 ]"
+check "zsh-guard: blocks set -- \$var and for x in \$list" "[ \"\$(zg 'set -- \$s')\" = 2 ] && [ \"\$(zg 'for x in \$L; do :; done')\" = 2 ]"
+check "zsh-guard: blocks an unquoted URL with ? and an unquoted --include glob" "[ \"\$(zg 'curl -s https://x.io/a?b=1')\" = 2 ] && [ \"\$(zg 'grep -r --include=*.js x .')\" = 2 ]"
+check "zsh-guard: allows quoted URLs, messages and heredoc bodies" "[ \"\$(zg \"curl -s 'https://x.io/a?b=1'\")\" = 0 ] && [ \"\$(zg 'git commit -m \"for path in x\"')\" = 0 ] && [ \"\$(zg \"python3 - <<'E'
+for path in ps: pass
+E\")\" = 0 ]"
+check "zsh-guard: does nothing under bash" "python3 -c 'import json; print(json.dumps({\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"for path in a; do :; done\"}}))' | SHELL=/bin/bash bash '$HERE/hooks/zsh-guard.sh'"
+
 # 6b2. run.sh idle gate: no model run when nothing is buildable and nothing changed
 IG="$T/ig"; mkdir -p "$IG/co" "$IG/bin"; printf '#!/bin/sh\necho run >> "%s/calls"\n' "$IG" > "$IG/bin/claude"; chmod +x "$IG/bin/claude"
 printf '| Product | Folder | Ledger | Stage |\n| Storefront | ./store | x | building |\n| ID | Track | Action | Serves | Owner | Status | Due | Evidence |\n| P1 | product | x | y | me | owner | - | - |\n' > "$IG/co/COMPANY.md"
@@ -110,6 +120,7 @@ inst; inst
 check "install: skills linked for every tool" "[ -L '$H/.agents/skills/ship' ] && [ -L '$H/.claude/skills/learn' ] && [ -L '$H/.codex/skills/run-company' ]"
 check "install: one rules block after two installs" "[ \"\$(grep -c 'agent-harness:start' '$H/.claude/CLAUDE.md')\" = 1 ] && grep -q 'my own rules' '$H/.claude/CLAUDE.md'"
 check "install: hooks added once, user hooks kept" "python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1]))[\"hooks\"]; s=json.dumps(d); sys.exit(0 if s.count(\"done-check.py\")==1 and s.count(\"continue-ledger.sh\")==1 and \"my-own-hook.sh\" in s and \"UserPromptSubmit\" in d else 1)' '$H/.claude/settings.json'"
+check "install: zsh-guard runs before Bash calls only (matcher Bash), and not for Codex" "python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1]))[\"hooks\"][\"PreToolUse\"]; g=[x for x in d if any(\"zsh-guard.sh\" in c[\"command\"] for c in x[\"hooks\"])]; sys.exit(0 if len(g)==1 and g[0].get(\"matcher\")==\"Bash\" else 1)' '$H/.claude/settings.json' && ! grep -q zsh-guard '$H/.codex/hooks.json'"
 check "install: codex hooks.json written" "grep -q -- '--judge codex' '$H/.codex/hooks.json'"
 inst --uninstall
 check "uninstall: links, block and our hooks removed, user content kept" "[ ! -e '$H/.agents/skills/ship' ] && ! grep -q 'agent-harness:start' '$H/.claude/CLAUDE.md' && grep -q 'my own rules' '$H/.claude/CLAUDE.md' && ! grep -q 'done-check' '$H/.claude/settings.json' && grep -q 'my-own-hook.sh' '$H/.claude/settings.json'"

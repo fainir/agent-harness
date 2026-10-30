@@ -47,9 +47,10 @@ if mode == "add":
     }
     if tool == "claude":
         want["PostToolUse"] = ["bash \"%s/rules-reload.sh\"" % hooks]
+        want["PreToolUse"] = ["bash \"%s/zsh-guard.sh\"" % hooks]  # Claude Code's Bash tool runs the login shell, zsh on macOS
     for event, cmds in want.items():
         entry = [{"type": "command", "command": c, "timeout": 150 if "done-check" in c else 10} for c in cmds]
-        h.setdefault(event, []).append({"hooks": entry})
+        h.setdefault(event, []).append({"matcher": "Bash", "hooks": entry} if event == "PreToolUse" else {"hooks": entry})
 if not h:
     data.pop("hooks", None)
 os.makedirs(os.path.dirname(path), exist_ok=True)
