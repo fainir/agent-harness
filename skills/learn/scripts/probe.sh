@@ -23,6 +23,13 @@ printf 'reference=%s\ncandidate=%s\ncandidate_file=%s\ntask_dir=%s\nrunner=%s\np
 
 prepare() {  # $1 = copy dir: offline copy of the task folder
   rsync -a --exclude node_modules --exclude .runtime --exclude .venv --exclude __pycache__ "$SRC/" "$1/"
+  if [ -f "$1/.git" ]; then  # linked worktree or submodule: .git points at the main repo, whose remotes and refs the run would change
+    rm -f "$1/.git"
+    if git clone -q --no-checkout "$SRC" "$WORK/git-$(basename "$1")" 2>/dev/null; then
+      mv "$WORK/git-$(basename "$1")/.git" "$1/.git"; rm -rf "$WORK/git-$(basename "$1")"
+      git -C "$1" reset -q "$(git -C "$SRC" rev-parse HEAD)"
+    fi
+  fi
   if git -C "$1" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     for r in $(git -C "$1" remote); do git -C "$1" remote remove "$r"; done
   fi

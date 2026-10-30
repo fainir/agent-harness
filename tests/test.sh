@@ -74,6 +74,14 @@ PD=$(ls -d "$P"/l/probes/* 2>/dev/null | head -1); ref=$(sed -n 's/^reference=//
 check "probe: candidate text reaches only the candidate run" "grep -q 'candidate=yes' '$PD/$can/final.txt' && grep -q 'candidate=no' '$PD/$ref/final.txt'"
 check "probe: copies are offline and the source is untouched" "grep -q 'remotes=0' '$PD/$can/final.txt' && [ ! -e '$P/task/out.txt' ] && [ \"\$(git -C '$P/task' remote | wc -l | tr -d ' ')\" = 1 ]"
 check "probe: records what each run changed" "grep -q 'out.txt' '$PD/$can/changes.txt'"
+# 6c. a linked worktree's .git points at the main repo: its copies need their own repository, or removing remotes and committing hit the real one
+PW="$T/probewt"; mkdir -p "$PW/bin"
+(cd "$PW" && git init -q main && cd main && git remote add origin https://example.com/y.git && echo hi > README.md && git add -A && git -c user.email=t@t -c user.name=t commit -qm init && git worktree add -q --detach "$PW/wt")
+printf '#!/bin/sh\necho touched > out.txt\ngit add -A >/dev/null 2>&1; git -c user.email=t@t -c user.name=t commit -qm probe >/dev/null 2>&1\nprintf "{\\"result\\":\\"remotes=%%s\\"}\\n" "$(git remote | wc -l | tr -d " ")"\n' > "$PW/bin/claude"; chmod +x "$PW/bin/claude"
+WTHEAD=$(git -C "$PW/wt" rev-parse HEAD)
+PATH="$PW/bin:$PATH" LEARNINGS_DIR="$PW/l" PROBE_TIMEOUT=60 bash "$HERE/skills/learn/scripts/probe.sh" "$PW/wt" "do it" "$P/cand.md" >/dev/null 2>&1
+PDW=$(ls -d "$PW"/l/probes/* 2>/dev/null | head -1)
+check "probe: a worktree task keeps the main repo's remote and HEAD, and its copies are offline" "[ \"\$(git -C '$PW/main' remote)\" = origin ] && [ \"\$(git -C '$PW/wt' rev-parse HEAD)\" = '$WTHEAD' ] && grep -q 'remotes=0' '$PDW/A/final.txt' && grep -q 'remotes=0' '$PDW/B/final.txt'"
 check "size: every skill is named in the rules block" "HOME='$T/nohome' SKILLS_DIR='$HERE/skills' HARNESS_RULES_FILE='$HERE/rules/harness.md' bash '$HERE/skills/learn/scripts/size.sh' >/dev/null"
 SZ="$T/sz"; mkdir -p "$SZ/home/.codex" "$SZ/skills"; { printf '<!-- other:start -->\n'; seq 1 20; printf '<!-- other:end -->\n'; seq 1 70; } > "$SZ/home/.codex/AGENTS.md"
 check "size: lines in another tool's marker block are reported, not budgeted" "HOME='$SZ/home' SKILLS_DIR='$SZ/skills' bash '$HERE/skills/learn/scripts/size.sh' | grep -q '^ok .* 70/80.*(+22 managed)'"
