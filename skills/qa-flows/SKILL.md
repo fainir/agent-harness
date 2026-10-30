@@ -9,6 +9,8 @@ Assume it is broken until you have watched it work. You test as a user, not as t
 
 ## Per flow row (F<n> in READINESS.md)
 
+Start from `qa/README.md` "How to QA this project" (start command, test data, selectors, tricks); before you finish, add what you had to work out.
+
 1. **Fresh state**: new user / cleared storage / new test account (`qa+<flow>@example.com` style on the product's own sign-up; never a real third-party account).
 2. **Drive the real UI** at 375px and desktop (or the simulator, or the real bot channel). Click what a user clicks, type what a user types. No API shortcuts for the verdict.
 3. **Unhappy paths**: wrong input, empty input, double submit, back button, refresh mid-flow, slow network, expired session, no permission. Each one either behaves well or becomes a defect row.

@@ -74,6 +74,10 @@ PD=$(ls -d "$P"/l/probes/* 2>/dev/null | head -1); ref=$(sed -n 's/^reference=//
 check "probe: candidate text reaches only the candidate run" "grep -q 'candidate=yes' '$PD/$can/final.txt' && grep -q 'candidate=no' '$PD/$ref/final.txt'"
 check "probe: copies are offline and the source is untouched" "grep -q 'remotes=0' '$PD/$can/final.txt' && [ ! -e '$P/task/out.txt' ] && [ \"\$(git -C '$P/task' remote | wc -l | tr -d ' ')\" = 1 ]"
 check "probe: records what each run changed" "grep -q 'out.txt' '$PD/$can/changes.txt'"
+# 6d. init-product.sh seeds the project's QA how-to, so qa-user agents start from it instead of a long brief
+IP="$T/initp"; bash "$HERE/skills/ship/scripts/init-product.sh" "$IP/new" "Demo" >/dev/null 2>&1
+mkdir -p "$IP/old/qa" && echo "our own notes" > "$IP/old/qa/README.md" && bash "$HERE/skills/ship/scripts/init-product.sh" "$IP/old" "Old" >/dev/null 2>&1
+check "init-product: qa/README.md carries a 'How to QA this project' section, and an existing README is kept" "grep -q '^## How to QA this project' '$IP/new/qa/README.md' && [ \"\$(cat '$IP/old/qa/README.md')\" = 'our own notes' ]"
 # 6c. a linked worktree's .git points at the main repo: its copies need their own repository, or removing remotes and committing hit the real one
 PW="$T/probewt"; mkdir -p "$PW/bin"
 (cd "$PW" && git init -q main && cd main && git remote add origin https://example.com/y.git && echo hi > README.md && git add -A && git -c user.email=t@t -c user.name=t commit -qm init && git worktree add -q --detach "$PW/wt")
