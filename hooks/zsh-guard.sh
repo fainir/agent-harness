@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # PreToolUse hook for the Bash tool: when the shell is zsh (the macOS default), block the zsh traps agents keep
 # falling into, with the fix, before the command runs. A rule line alone did not stop them (learnings inbox,
-# 4 slips on 2026-10-30). Quoted strings and heredoc bodies are ignored, so scripts and messages never trip it.
+# 6 slips on 2026-10-30). Quoted strings and heredoc bodies are ignored, so scripts and messages never trip it.
 # Exit 2 with the reason on stderr blocks the call; anything else lets it run. ZSH_GUARD_FORCE=1 checks under any shell.
 # The check is Python, read from fd 3 so stdin stays the hook payload.
 exec python3 -I /dev/fd/3 3<<'PY'
@@ -45,6 +45,11 @@ TRAPS = [
     (r"--(?:include|exclude)(?:-dir)?=[^\s'\"]*\*|\s-i?name\s+[^\s'\"]*\*",
      "zsh expands an unquoted pattern itself, or stops with 'no matches found'. Quote it: --include='*.js', -name '*.png'."),
 ]
+# zsh expands a word that starts with = into a command's path: `echo ======` and `[ "$a" == b ]` stop with
+# "not found" (2 slips on 2026-10-30). Inside [[ ]] == is a comparison, so those are left out.
+if re.search(r"(?:^|[\s;&|(])=\S", re.sub(r"\[\[.*?\]\]", "", bare)):
+    TRAPS.append((r"", "zsh expands a word that starts with = into a command path, so `echo ======` or `[ $a == b ]` stops with 'not found'. "
+                       "Quote it ('======'), compare with a single = inside [ ], or use [[ ]]."))
 for pattern, why in TRAPS:
     if re.search(pattern, bare):
         sys.stderr.write("zsh-guard: " + why + " The Bash tool runs zsh here; fix the command and run it again.\n")

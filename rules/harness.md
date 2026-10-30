@@ -35,6 +35,7 @@ Never inflate a small request into a big one; never shrink a big one into advice
 - Two levels. A lesson about this project goes into its own `AGENTS.md` `## Working here` (`bash ~/.agents/skills/learn/scripts/project-note.sh "<line>"`), so the next run there starts with it. A lesson about how agents work, a failed or improvised step, or an ask the owner should not have needed gets one `note.sh` line as it happens; a big-job run ends with `run-log.sh` and a `Learned:` line.
 - The `learn` skill reviews the notes weekly in the Harness² style: pick one recurring cause, propose up to two fixes, probe them against the current harness on the same real task (`learn/scripts/probe.sh`, blind A/B), then adopt, merge or keep the base, one tested change at a time, kept only if verified rows hold and owner asks per run go down.
 - The weekly review promotes project lessons that recur in two or more projects into the shared harness; project facts never go into the shared skills.
+- A harness change counts once every session uses it: the copies both tools load (the installed skills, the hooks, and the rules in both `~/.claude/CLAUDE.md` and `~/.codex/AGENTS.md`) hold it, and new hook behavior lives inside a hook both tools already run, since a new registration reaches only new sessions. Running chats hear what changed from `harness-notice.py` at their next prompt or tool call.
 
 ### Writing
 

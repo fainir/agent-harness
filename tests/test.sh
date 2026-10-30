@@ -25,13 +25,17 @@ check "nudge: asks for exactly one owner action" "nudge '{}' | grep -q 'NEEDS YO
 check "nudge: warns when a company has no schedule" "nudge '{}' | grep -q 'no scheduled run'"
 check "nudge: silent when already continued" "[ -z \"\$(nudge '{\"stop_hook_active\":true}')\" ]"
 
-# 4. rules-reload.sh
-printf '{}\n' > "$T/transcript.jsonl"; sleep 1; printf '# rules\n' > "$T/RULES.md"
-rr() { printf '{"transcript_path":"%s/transcript.jsonl"}' "$T" | HARNESS_RULES_FILE="$T/RULES.md" TMPDIR="$T" bash "$HERE/hooks/rules-reload.sh"; }
+# 4. harness-notice.py: running chats of both tools hear which rules and skills changed after they started
+mkdir -p "$T/sk/ship" "$T/sk/old"; printf '# old\n' > "$T/sk/old/SKILL.md"; touch -t 202001010000 "$T/sk/old/SKILL.md"
+printf '{}\n' > "$T/transcript.jsonl"; sleep 1; printf '# rules\n' > "$T/RULES.md"; printf '# ship\n' > "$T/sk/ship/SKILL.md"
+hn() { HARNESS_RULES_CLAUDE="$T/RULES.md" HARNESS_RULES_CODEX="$T/CODEX.md" HARNESS_SKILLS_DIR="$T/sk" TMPDIR="$T" "$@"; }
+rr() { printf '{"transcript_path":"%s/transcript.jsonl"}' "$T" | hn bash "$HERE/hooks/rules-reload.sh"; }
 if { stat -c %W "$T/transcript.jsonl" 2>/dev/null || stat -f %B "$T/transcript.jsonl" 2>/dev/null; } | grep -qE "^[1-9][0-9]*$"; then
-  check "rules reload: nudges once when rules changed after the chat began" "rr | grep -q 'changed after this chat started'"
-  check "rules reload: silent the second time" "[ -z \"\$(rr)\" ]"
-else ok "rules reload: skipped (no file birth time on this filesystem)"; fi
+  check "harness notice: a running chat hears once that its rules and a skill changed" "rr > '$T/hn1'; grep -q hookSpecificOutput '$T/hn1' && grep -q 'RULES.md' '$T/hn1' && grep -q 'the skill ship (' '$T/hn1'"
+  check "harness notice: silent the second time" "[ -z \"\$(rr)\" ]"
+else ok "harness notice: skipped (no file birth time on this filesystem)"; fi
+printf '# codex rules\n' > "$T/CODEX.md"
+check "harness notice: a running Codex chat hears it through the prompt hook" "printf '{\"prompt\":\"go on\",\"session_id\":\"cx1\"}' | HARNESS_TOOL=codex HARNESS_SESSION_START=1000 hn bash '$HERE/hooks/reply-budget.sh' > '$T/hn2'; grep -q 'Reply budget' '$T/hn2' && grep -q 'CODEX.md' '$T/hn2' && ! grep -q 'RULES.md' '$T/hn2'"
 
 # 5. done-check.py local passes (no judge call)
 dc() { (cd "$T" && printf '%s' "$1" | DONE_CHECK_TEST=1 python3 -I "$HERE/hooks/done-check.py" --judge codex); }
@@ -83,6 +87,8 @@ zg() { python3 -c 'import json,sys; print(json.dumps({"tool_name":"Bash","tool_i
 check "zsh-guard: blocks a loop variable named path" "[ \"\$(zg 'for path in a b; do echo x; done')\" = 2 ]"
 check "zsh-guard: blocks set -- \$var and for x in \$list" "[ \"\$(zg 'set -- \$s')\" = 2 ] && [ \"\$(zg 'for x in \$L; do :; done')\" = 2 ]"
 check "zsh-guard: blocks an unquoted URL with ? and an unquoted --include glob" "[ \"\$(zg 'curl -s https://x.io/a?b=1')\" = 2 ] && [ \"\$(zg 'grep -r --include=*.js x .')\" = 2 ]"
+check "zsh-guard: blocks a word starting with = (echo ======, [ a == b ])" "[ \"\$(zg 'echo ======')\" = 2 ] && [ \"\$(zg '[ \"\$a\" == b ] && echo y')\" = 2 ]"
+check "zsh-guard: allows = when quoted, in assignments and options, and == inside [[ ]]" "[ \"\$(zg \"echo '======'\")\" = 0 ] && [ \"\$(zg 'a=b; sort -t= -k2 f; git log --format=%h')\" = 0 ] && [ \"\$(zg '[[ \$a == b ]] && echo y')\" = 0 ]"
 check "zsh-guard: allows quoted URLs, messages and heredoc bodies" "[ \"\$(zg \"curl -s 'https://x.io/a?b=1'\")\" = 0 ] && [ \"\$(zg 'git commit -m \"for path in x\"')\" = 0 ] && [ \"\$(zg \"python3 - <<'E'
 for path in ps: pass
 E\")\" = 0 ]"
@@ -119,7 +125,8 @@ printf '# Goal for Acme\n\nSell widgets to makers.\n' > "$WS/GOAL.md"
 printf '# Acme agent notes\n\n## Working here\n\n- Run tests with npm test.\n' > "$WS/AGENTS.md"
 printf '# Market research\n\nMakers buy online.\n' > "$WS/research/market.md"
 (cd "$WS" && git init -q && git add -A && git -c user.email=t@t -c user.name=t commit -qm init)
-LEARNINGS_DIR="$T/learn-ws" python3 -I "$HERE/skills/workspace/scripts/workspace.py" "$WS" >/dev/null 2>&1
+wsgen() { LEARNINGS_DIR="$T/learn-ws" WORKSPACES_DIR="$T/wsreg" python3 -I "$HERE/skills/workspace/scripts/workspace.py" "$@"; }
+wsgen "$WS" >/dev/null 2>&1
 cat > "$T/ws-check.py" <<'PYCHECK'
 import json, sys
 d = json.load(open(sys.argv[1] + '/.workspace/data.json'))
@@ -130,7 +137,23 @@ sys.exit(0 if ok else 1)
 PYCHECK
 check "workspace: tasks, numbers, docs, lessons, decisions, files and commits read from the files" "python3 -I '$T/ws-check.py' '$WS'"
 check "workspace: page named for the project, closing tags in the data escaped" "grep -q '<title>Acme Workspace</title>' '$WS/.workspace/artifact.html' && ! grep -q 'First </script>' '$WS/.workspace/artifact.html'"
-check "workspace: .workspace/ is gitignored" "grep -qx '.workspace/' '$WS/.gitignore'"
+check "workspace: .workspace/ kept out of git without touching .gitignore" "git -C '$WS' check-ignore -q .workspace/index.html && [ ! -e '$WS/.gitignore' ]"
+WP="$T/wsplan"; mkdir -p "$WP/.claude"
+printf '# Gizmo - Master Plan\n\n## Vision\n\nMake gizmos people love.\n\n## Phase 1\n\n- [x] M1 Scaffold - DoD: builds clean\n- [~] Wire the API\n- [ ] Launch page\n- [!] Domain purchase\n- [-] Old idea\n' > "$WP/.claude/plan.md"
+printf '# Gizmo\n\nKey sk-ant-api03-abcdefghijklmnopqrstuvwxyz0123 and the service password hunter2hunter2.\n' > "$WP/README.md"
+printf 'SERVICE_PASSWORD=hunter2hunter2\n' > "$WP/.env.local"
+wsgen "$WP" >/dev/null 2>&1
+cat > "$T/ws-plan.py" <<'PYCHECK'
+import json, sys
+d = json.load(open(sys.argv[1] + '/.workspace/data.json')); r = d['rows']
+sys.exit(0 if [x['status'] for x in r] == ['verified', 'building', 'todo', 'owner', 'cut'] and r[0]['id'] == 'M1' and r[0]['dod'] == 'builds clean'
+         and d['project']['name'] == 'Gizmo' and d['project']['goal'].startswith('Make gizmos') else 1)
+PYCHECK
+check "workspace: tasks, name and goal read from .claude/plan.md" "python3 -I '$T/ws-plan.py' '$WP'"
+check "workspace: .env values and key-shaped strings never reach the page" "! grep -q 'hunter2hunter2' '$WP/.workspace/artifact.html' && ! grep -q 'sk-ant-api03' '$WP/.workspace/artifact.html' && grep -q 'redacted' '$WP/.workspace/artifact.html'"
+wsgen --url "$WS" https://claude.ai/artifact/test123 && wsgen --hub >/dev/null 2>&1
+check "workspace: the hub lists every built project and its published page" "grep -q 'Acme' '$T/wsreg/hub/artifact.html' && grep -q 'Gizmo' '$T/wsreg/hub/artifact.html' && grep -q 'claude.ai/artifact/test123' '$T/wsreg/hub/artifact.html'"
+check "workspace: --stale lists a project only after its files change" "[ -z \"\$(wsgen --stale)\" ] && touch -t 203001010000 '$WS/COMPANY.md' && [ \"\$(wsgen --stale)\" = '$WS' ]"
 
 # 7. install, reinstall, uninstall in a throwaway HOME
 H="$T/home"; mkdir -p "$H/.claude" "$H/.codex"; printf '# my own rules\n' > "$H/.claude/CLAUDE.md"

@@ -158,6 +158,7 @@ td.num { font-variant-numeric: tabular-nums; white-space: nowrap; text-align: ri
   document.getElementById('name').textContent = P.name || 'Workspace';
   if (P.stage) { var st = document.getElementById('stage'); st.textContent = P.stage.split(/[\s(]/)[0]; st.title = P.stage; st.hidden = false; }
   var meta = [];
+  if (P.hub) meta.push('<a href="' + esc(P.hub) + '" target="_blank" rel="noopener">All projects</a>');
   meta.push('Updated ' + esc((P.generated || '').replace('T', ' ')));
   if (P.repo) meta.push('<a href="' + esc(P.repo) + '" target="_blank" rel="noopener">Repository</a>');
   (D.links || []).slice(0, 3).forEach(function (u) { meta.push('<a href="' + esc(u) + '" target="_blank" rel="noopener">' + esc(u.replace(/^https?:\/\//, '').replace(/\/$/, '')) + '</a>'); });
@@ -239,17 +240,18 @@ td.num { font-variant-numeric: tabular-nums; white-space: nowrap; text-align: ri
       var body = s.querySelector('#tasks-body');
       if (state.mode === 'table') {
         body.innerHTML = '<div class="table-wrap"><table><thead><tr><th>ID</th><th>Task</th><th>Status</th><th>Track</th><th>Due</th><th>Evidence</th></tr></thead><tbody>' + list.map(function (r) {
-          return '<tr><td><span class="idchip">' + esc(r.id) + '</span></td><td>' + inline(r.title) + '</td><td><span class="status" style="--st:' + stVar(r.st) + '">' + esc(r.st) + '</span></td><td>' + inline(r.track) + '</td><td class="date">' + esc(r.due) + '</td><td>' + inline(r.evidence) + '</td></tr>';
+          return '<tr><td><span class="idchip">' + esc(r.id) + '</span></td><td>' + inline(r.title) + '</td><td><span class="status" style="--st:' + stVar(r.st) + '">' + esc(r.st) + '</span></td><td>' + inline(r.track) + '</td><td class="date">' + esc(r.due) + '</td><td>' + inline(r.evidence || r.dod) + '</td></tr>';
         }).join('') + '</tbody></table></div>';
         return;
       }
       body.innerHTML = '<div class="board-scroll"><div class="board">' + STATUS.map(function (x) {
-        var lane = list.filter(function (r) { return r.st === x[0]; });
-        if (!lane.length && (x[0] === 'human' || x[0] === 'cut')) return '';
-        return '<div class="lane"><div class="lane-head"><span><span class="dot" style="background:' + stVar(x[0]) + '"></span>' + esc(x[1]) + '</span><span class="n">' + lane.length + '</span></div>' + (lane.length ? lane.map(function (r, i) {
+        var lane = list.filter(function (r) { return r.st === x[0]; }), all = lane.length;
+        if (!all && (x[0] === 'human' || x[0] === 'cut')) return '';
+        if (x[0] === 'verified' && all > 60) lane = lane.slice(-60);
+        return '<div class="lane"><div class="lane-head"><span><span class="dot" style="background:' + stVar(x[0]) + '"></span>' + esc(x[1]) + '</span><span class="n">' + all + '</span></div>' + (all > lane.length ? '<p class="empty">The latest ' + lane.length + ' of ' + all + '; Table lists every one.</p>' : '') + (lane.length ? lane.map(function (r, i) {
           return '<button class="card" type="button" aria-expanded="false" style="--st:' + stVar(r.st) + '"><span class="m"><span class="idchip">' + esc(r.id) + '</span><span>' + inline(r.track) + '</span>' + (r.due ? '<span>' + esc(r.due) + '</span>' : '') + '</span><span class="t">' + inline(r.title) + '</span><span class="more">' +
             (r.serves ? '<span><b>Serves</b> ' + inline(r.serves) + '</span>' : '') + (r.owner ? '<span><b>Owner</b> ' + inline(r.owner) + '</span>' : '') + (r.status_text && r.status_text.toLowerCase() !== r.st ? '<span><b>Status</b> ' + inline(r.status_text) + '</span>' : '') +
-            (r.evidence ? '<span><b>Evidence</b> ' + inline(r.evidence) + '</span>' : '') + '<span><b>From</b> ' + esc(r.source) + '</span></span></button>';
+            (r.dod ? '<span><b>Done when</b> ' + inline(r.dod) + '</span>' : '') + (r.evidence ? '<span><b>Evidence</b> ' + inline(r.evidence) + '</span>' : '') + '<span><b>From</b> ' + esc(r.source) + '</span></span></button>';
         }).join('') : '<p class="empty">None</p>') + '</div>';
       }).join('') + '</div></div>';
       body.querySelectorAll('.card').forEach(function (c) { c.addEventListener('click', function (e) { if (e.target.closest('a')) return; c.setAttribute('aria-expanded', c.getAttribute('aria-expanded') === 'true' ? 'false' : 'true'); }); });

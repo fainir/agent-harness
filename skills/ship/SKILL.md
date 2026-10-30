@@ -75,6 +75,7 @@ Shipped: <what a user can now do that they could not before> (evidence: links)
 Rows: <verified>/<total> verified, <n> building, <n> owner, <n> waiting
 NEEDS YOU (1 of <n>): <where> -> <exact action> -> <unblocks>
 Next: <the row you take next>
+Workspace: <the project's page, rebuilt this run>
 Learned: <one harness lesson, or none>
 ```
-No hashes, no file inventories, no "still waiting" turns. Before the report: each friction got a `learn/scripts/note.sh` line as it happened, and the run's numbers one `learn/scripts/run-log.sh` line (learn skill).
+No hashes, no file inventories, no "still waiting" turns. Before the report: each friction got a `learn/scripts/note.sh` line as it happened, the run's numbers one `learn/scripts/run-log.sh` line (learn skill), and the workspace view was rebuilt and republished (workspace skill).

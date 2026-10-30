@@ -56,4 +56,6 @@ Portfolio: <active>/<max> active; funnel <queue>/<validating>/<building>/<launch
 Moved: <up to 5 lines: company -> new stage or KPI, evidence>
 NEEDS YOU (1 of <n>): <batched action>
 Next run: <when>; next from the queue: <ids>
+All projects: <the hub page>
 ```
+Before the report, refresh the pages: `workspace.py --stale` names the companies whose files changed; rebuild and republish those, then the hub (workspace skill).

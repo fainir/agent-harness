@@ -1,0 +1,186 @@
+<title>All Projects</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: the shelf of project binders. What needs the owner first, then one card per project; each card opens that project's workspace. */
+:root {
+  --bg: #f3f4f7; --surface: #ffffff; --raised: #f8f9fb; --ink: #191c22; --muted: #5b6372; --line: #dde1e8;
+  --accent: #2a55c9; --accent-soft: #e5ebfa; --accent-ink: #ffffff;
+  --st-todo: #6b7280; --st-building: #2a55c9; --st-waiting: #b26b00; --st-owner: #c2341f; --st-human: #7b4fc9; --st-verified: #19804a; --st-cut: #9aa1ac;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+  --body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1217; --surface: #161a21; --raised: #1b2029; --ink: #e6e8ed; --muted: #9aa3b1; --line: #29303b;
+  --accent: #86a2ff; --accent-soft: #1d2741; --accent-ink: #0f1217;
+  --st-todo: #9aa3b1; --st-building: #86a2ff; --st-waiting: #f0a63a; --st-owner: #ff7b66; --st-human: #b495ff; --st-verified: #4cc98a; --st-cut: #6c7480;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0f1217; --surface: #161a21; --raised: #1b2029; --ink: #e6e8ed; --muted: #9aa3b1; --line: #29303b;
+  --accent: #86a2ff; --accent-soft: #1d2741; --accent-ink: #0f1217;
+  --st-todo: #9aa3b1; --st-building: #86a2ff; --st-waiting: #f0a63a; --st-owner: #ff7b66; --st-human: #b495ff; --st-verified: #4cc98a; --st-cut: #6c7480;
+  color-scheme: dark }
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body); margin: 0 }
+a { color: var(--accent) }
+code { font: 0.86em var(--mono); background: var(--raised); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px }
+.wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); max-width: 1320px; margin: 0 auto }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface) }
+header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line) }
+.top .wrap { padding-block: 14px 12px; display: grid; gap: 6px }
+h1 { font: 700 clamp(22px, 3.2vw, 30px)/1.1 var(--display); margin: 0; letter-spacing: -0.01em }
+.meta { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; gap: 4px 14px }
+main .wrap { padding-block: 22px 60px; display: grid; gap: 22px; grid-template-columns: minmax(0, 1fr) }
+main .wrap > * { min-width: 0 }
+h2 { font: 600 13px var(--body); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 10px }
+h3 { font: 700 18px/1.25 var(--display); margin: 0; min-width: 0; overflow-wrap: anywhere }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; min-width: 0 }
+.kpis { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 100px), 1fr)) }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 16px; display: grid; gap: 2px }
+.kpi .label { font-size: 13px; color: var(--muted) }
+.kpi .value { font: 700 26px/1.15 var(--display); font-variant-numeric: tabular-nums }
+.needs { border-left: 4px solid var(--st-owner) }
+ul.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px }
+ul.list li { display: grid; grid-template-columns: 2.2em 1fr; gap: 10px; align-items: baseline; min-width: 0 }
+ul.list li > div { min-width: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden }
+.count { font: 600 13px var(--mono); color: var(--st-owner); text-align: right; font-variant-numeric: tabular-nums }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+.chip { font: 500 13px var(--body); padding: 6px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent) }
+input[type="search"], select { font: 14px var(--body); padding: 7px 11px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); min-width: 0 }
+input[type="search"] { flex: 1 1 200px }
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+.cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)) }
+.proj { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 9px; align-content: start; min-width: 0 }
+.ph { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-width: 0 }
+.ph a { color: var(--ink); text-decoration: none }
+.ph a:hover { color: var(--accent); text-decoration: underline }
+.pill { font: 500 11.5px/1 var(--body); padding: 5px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap }
+.goal { margin: 0; color: var(--muted); font-size: 14px; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden }
+.bar { display: flex; height: 8px; border-radius: 999px; overflow: hidden; background: var(--raised); border: 1px solid var(--line) }
+.bar span { display: block; height: 100% }
+.facts { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 2px 8px }
+.facts b { color: var(--ink); font-variant-numeric: tabular-nums }
+.hot { color: var(--st-owner); font-weight: 600 }
+.ask { margin: 0; font-size: 13.5px; border-left: 3px solid var(--st-owner); padding-left: 9px; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden }
+.foot { display: flex; gap: 8px; font-size: 12.5px; color: var(--muted); min-width: 0; align-items: baseline }
+.foot .subj { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0 }
+.date { font: 12.5px var(--mono); color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums }
+.where { font: 11.5px var(--mono); color: var(--muted); display: flex; justify-content: space-between; gap: 8px; min-width: 0; border-top: 1px dashed var(--line); padding-top: 8px }
+.where span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0 }
+.where span + span { white-space: nowrap }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface) }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top }
+th { font: 600 12px var(--body); color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; background: var(--raised) }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap }
+.empty { color: var(--muted); font-size: 13px; padding: 6px 4px; margin: 0 }
+@media (prefers-reduced-motion: no-preference) { .proj { transition: box-shadow .15s } .proj:hover { box-shadow: 0 2px 10px rgba(0,0,0,.06) } }
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <h1>All projects</h1>
+    <div class="meta" id="meta"></div>
+  </div>
+</header>
+<main><div class="wrap">
+  <div class="kpis" id="totals"></div>
+  <div id="needs"></div>
+  <div class="toolbar" id="tb"></div>
+  <div id="list"></div>
+</div></main>
+
+<script id="hub-data" type="application/json">__HUB_DATA__</script>
+<script>
+(function () {
+  var D = JSON.parse(document.getElementById('hub-data').textContent), PR = D.projects || [];
+  var STATUS = ['todo', 'building', 'waiting', 'owner', 'human', 'verified', 'cut'];
+  var NOW = Date.parse(D.generated) || Date.now();
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function inline(s) {
+    var t = esc(s);
+    t = t.replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+    t = t.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    return t.replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
+  }
+  function age(e) { var t = Date.parse(e.last_commit || ''); return isNaN(t) ? 9999 : Math.floor((NOW - t) / 864e5); }
+  function open(e) { var c = e.counts || {}; return (c.todo || 0) + (c.building || 0); }
+  function done(e) { return (e.counts || {}).verified || 0; }
+  function link(e, label) {
+    if (e.url) return '<a href="' + esc(e.url) + '" target="_blank" rel="noopener">' + label + '</a>';
+    return location.protocol === 'file:' ? '<a href="file://' + encodeURI(e.path) + '/.workspace/index.html">' + label + '</a>' : label;
+  }
+  function cap(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); }
+  function sum(f) { return PR.reduce(function (a, e) { return a + f(e); }, 0); }
+
+  var pub = PR.filter(function (e) { return e.url; }).length;
+  document.getElementById('meta').innerHTML = '<span>' + PR.length + ' projects</span><span>' + pub + ' with a published page</span><span>Updated ' + esc((D.generated || '').replace('T', ' ')) + '</span>';
+  document.getElementById('totals').innerHTML = [['Projects', PR.length], ['Open tasks', sum(open)], ['Need you', sum(function (e) { return e.needs_total || 0; })], ['Waiting', sum(function (e) { return e.waiting || 0; })], ['Done', sum(done)]].map(function (k) {
+    return '<div class="kpi"><span class="label">' + k[0] + '</span><span class="value">' + k[1] + '</span></div>';
+  }).join('');
+
+  var needy = PR.filter(function (e) { return e.needs_total; }).sort(function (a, b) { return age(a) - age(b); });
+  document.getElementById('needs').innerHTML = needy.length ? '<div class="panel needs"><h2>Needs you, by project</h2><ul class="list">' + needy.map(function (e) {
+    return '<li><span class="count" title="Open owner items">' + e.needs_total + '</span><div><b>' + link(e, esc(e.name)) + '</b>: ' + inline(e.needs[0]) + '</div></li>';
+  }).join('') + '</ul></div>' : '<div class="panel"><h2>Needs you</h2><p class="empty">Nothing is waiting on you in any project.</p></div>';
+
+  var state = { f: 'all', q: '', sort: 'recent', mode: 'cards' };
+  try { state.sort = localStorage.getItem('hub-sort') || 'recent'; state.mode = localStorage.getItem('hub-mode') || 'cards'; } catch (e) {}
+  var FILTERS = [['all', 'All', function () { return true; }], ['needs', 'Needs you', function (e) { return e.needs_total > 0; }],
+    ['active', 'Active this week', function (e) { return age(e) <= 7; }], ['quiet', 'Quiet 30+ days', function (e) { return age(e) > 30; }]];
+  var tb = document.getElementById('tb');
+  FILTERS.forEach(function (f) {
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.f = f[0];
+    b.textContent = f[1] + ' (' + PR.filter(f[2]).length + ')'; b.setAttribute('aria-pressed', f[0] === state.f ? 'true' : 'false');
+    b.addEventListener('click', function () { state.f = f[0]; tb.querySelectorAll('.chip').forEach(function (x) { x.setAttribute('aria-pressed', x.dataset.f === f[0] ? 'true' : 'false'); }); render(); });
+    tb.appendChild(b);
+  });
+  tb.insertAdjacentHTML('beforeend', '<input type="search" id="q" placeholder="Search projects" aria-label="Search projects">' +
+    '<select id="sort" aria-label="Sort"><option value="recent">Recent activity</option><option value="needs">Needs you first</option><option value="open">Most open tasks</option><option value="name">Name</option></select>' +
+    '<select id="mode" aria-label="View"><option value="cards">Cards</option><option value="table">Table</option></select>');
+  var q = document.getElementById('q'), so = document.getElementById('sort'), mo = document.getElementById('mode');
+  so.value = state.sort; mo.value = state.mode;
+  q.addEventListener('input', function () { state.q = q.value.toLowerCase(); render(); });
+  so.addEventListener('change', function () { state.sort = so.value; try { localStorage.setItem('hub-sort', so.value); } catch (e) {} render(); });
+  mo.addEventListener('change', function () { state.mode = mo.value; try { localStorage.setItem('hub-mode', mo.value); } catch (e) {} render(); });
+
+  function card(e) {
+    var c = e.counts || {}, t = e.total || 0, facts = [];
+    if (t) facts.push('<span><b>' + done(e) + '</b>/' + t + ' done</span>');
+    if (open(e)) facts.push('<span>' + open(e) + ' open</span>');
+    if (e.needs_total) facts.push('<span class="hot">' + e.needs_total + (e.needs_total === 1 ? ' needs' : ' need') + ' you</span>');
+    if (e.waiting) facts.push('<span>' + e.waiting + ' waiting</span>');
+    return '<article class="proj"><div class="ph"><h3>' + link(e, esc(e.name)) + '</h3>' + (e.stage ? '<span class="pill" title="' + esc(e.stage) + '">' + esc(e.stage.split(/[\s(]/)[0]) + '</span>' : '') + '</div>' +
+      (e.goal ? '<p class="goal">' + inline(cap(e.goal)) + '</p>' : '<p class="goal">No goal written yet.</p>') +
+      '<div class="bar" role="img" aria-label="' + done(e) + ' of ' + t + ' tasks done">' + (t ? STATUS.map(function (s) { return c[s] ? '<span style="width:' + (100 * c[s] / t) + '%;background:var(--st-' + s + ')"></span>' : ''; }).join('') : '') + '</div>' +
+      (facts.length ? '<div class="facts">' + facts.join('') + '</div>' : '<div class="facts">No tasks in a ledger or plan yet</div>') +
+      (e.needs_total ? '<p class="ask">' + inline(e.needs[0]) + '</p>' : '') +
+      '<div class="foot"><span class="date">' + esc(e.last_commit || 'no commits') + '</span><span class="subj" title="' + esc(e.last_subject) + '">' + esc(e.last_subject) + '</span></div>' +
+      '<div class="where"><span title="' + esc(e.where) + '">' + esc(e.where) + '</span><span>' + (e.url ? link(e, 'Open workspace') : 'not published yet') + '</span></div></article>';
+  }
+  function render() {
+    var f = FILTERS.filter(function (x) { return x[0] === state.f; })[0][2];
+    var list = PR.filter(function (e) { return f(e) && (!state.q || (e.name + ' ' + e.goal + ' ' + e.where + ' ' + (e.needs || []).join(' ')).toLowerCase().indexOf(state.q) >= 0); });
+    list.sort({
+      recent: function (a, b) { return age(a) - age(b); }, needs: function (a, b) { return (b.needs_total || 0) - (a.needs_total || 0) || age(a) - age(b); },
+      open: function (a, b) { return open(b) - open(a); }, name: function (a, b) { return a.name.localeCompare(b.name); }
+    }[state.sort] || function () { return 0; });
+    var out = document.getElementById('list');
+    if (!list.length) { out.innerHTML = '<p class="empty">No project matches.</p>'; return; }
+    if (state.mode === 'table') {
+      out.innerHTML = '<div class="table-wrap"><table><thead><tr><th>Project</th><th>Stage</th><th class="num">Done</th><th class="num">Open</th><th class="num">Needs you</th><th class="num">Waiting</th><th>Last commit</th></tr></thead><tbody>' + list.map(function (e) {
+        return '<tr><td>' + link(e, esc(e.name)) + '</td><td>' + esc((e.stage || '').split(/[\s(]/)[0]) + '</td><td class="num">' + done(e) + '/' + (e.total || 0) + '</td><td class="num">' + open(e) + '</td><td class="num">' + (e.needs_total || 0) + '</td><td class="num">' + (e.waiting || 0) + '</td><td class="date">' + esc(e.last_commit) + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+      return;
+    }
+    out.innerHTML = '<div class="cards">' + list.map(card).join('') + '</div>';
+  }
+  render();
+})();
+</script>
