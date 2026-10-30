@@ -112,12 +112,32 @@ check "project-note: does not add the same lesson twice" "bash '$HERE/skills/lea
 bash "$HERE/skills/learn/scripts/project-note.sh" "Node 24 rejects node --test with a bare directory" "$PN/b" >/dev/null
 check "review: a lesson in two projects is a promotion candidate" "PROJECT_ROOTS='$PN' LEARNINGS_DIR='$T/l2' bash '$HERE/skills/learn/scripts/review.sh' 2>/dev/null | grep -q ' 2  Node 24 rejects'"
 
+# 6b. workspace.py builds a project's view from its own files
+WS="$T/ws"; mkdir -p "$WS/research"
+printf '# Acme - Company ledger\n\nGoal: sell widgets\nStage: building\n\n## Numbers\n\n| KPI | Source | Now | Target | By | Updated |\n|---|---|---|---|---|---|\n| Paid orders | store | 0 | 10 | 2026-12-31 | 2026-10-30 |\n\n## Tracks\n\n| ID | Track | Action (plain words) | Serves | Owner | Status | Due | Evidence |\n|---|---|---|---|---|---|---|---|\n| P1 | product | Ship the store | Paid orders | me | verified | 2026-10-29 | url |\n| G1 | growth | First </script> post | Pageviews | me | todo | 2026-11-01 | |\n\n## Owner actions\n\n1. Stripe -> create account -> unblocks checkout\n\n## Decisions (last 10)\n\n- 2026-10-30 - Price at $29.\n' > "$WS/COMPANY.md"
+printf '# Goal for Acme\n\nSell widgets to makers.\n' > "$WS/GOAL.md"
+printf '# Acme agent notes\n\n## Working here\n\n- Run tests with npm test.\n' > "$WS/AGENTS.md"
+printf '# Market research\n\nMakers buy online.\n' > "$WS/research/market.md"
+(cd "$WS" && git init -q && git add -A && git -c user.email=t@t -c user.name=t commit -qm init)
+LEARNINGS_DIR="$T/learn-ws" python3 -I "$HERE/skills/workspace/scripts/workspace.py" "$WS" >/dev/null 2>&1
+cat > "$T/ws-check.py" <<'PYCHECK'
+import json, sys
+d = json.load(open(sys.argv[1] + '/.workspace/data.json'))
+ok = (len(d['rows']) == 2 and d['rows'][1]['status'] == 'todo' and d['kpis'][0]['now'] == '0' and d['lessons'][0]['text'].startswith('Run tests')
+      and any(x['path'] == 'research/market.md' for x in d['docs']) and d['owner_actions'][0]['done'] is False and d['project']['name'] == 'Acme'
+      and d['decisions'][0]['date'] == '2026-10-30' and any(f['path'] == 'GOAL.md' for f in d['files']) and len(d['commits']) == 1)
+sys.exit(0 if ok else 1)
+PYCHECK
+check "workspace: tasks, numbers, docs, lessons, decisions, files and commits read from the files" "python3 -I '$T/ws-check.py' '$WS'"
+check "workspace: page named for the project, closing tags in the data escaped" "grep -q '<title>Acme Workspace</title>' '$WS/.workspace/artifact.html' && ! grep -q 'First </script>' '$WS/.workspace/artifact.html'"
+check "workspace: .workspace/ is gitignored" "grep -qx '.workspace/' '$WS/.gitignore'"
+
 # 7. install, reinstall, uninstall in a throwaway HOME
 H="$T/home"; mkdir -p "$H/.claude" "$H/.codex"; printf '# my own rules\n' > "$H/.claude/CLAUDE.md"
 printf '{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"my-own-hook.sh"}]}]}}\n' > "$H/.claude/settings.json"
 inst() { HOME="$H" bash "$HERE/install.sh" "$@" >/dev/null 2>&1; }
 inst; inst
-check "install: skills linked for every tool" "[ -L '$H/.agents/skills/ship' ] && [ -L '$H/.claude/skills/learn' ] && [ -L '$H/.codex/skills/run-company' ]"
+check "install: skills linked for every tool" "[ -L '$H/.agents/skills/ship' ] && [ -L '$H/.claude/skills/learn' ] && [ -L '$H/.codex/skills/run-company' ] && [ -L '$H/.agents/skills/workspace' ]"
 check "install: one rules block after two installs" "[ \"\$(grep -c 'agent-harness:start' '$H/.claude/CLAUDE.md')\" = 1 ] && grep -q 'my own rules' '$H/.claude/CLAUDE.md'"
 check "install: hooks added once, user hooks kept" "python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1]))[\"hooks\"]; s=json.dumps(d); sys.exit(0 if s.count(\"done-check.py\")==1 and s.count(\"continue-ledger.sh\")==1 and \"my-own-hook.sh\" in s and \"UserPromptSubmit\" in d else 1)' '$H/.claude/settings.json'"
 check "install: zsh-guard runs before Bash calls only (matcher Bash), and not for Codex" "python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1]))[\"hooks\"][\"PreToolUse\"]; g=[x for x in d if any(\"zsh-guard.sh\" in c[\"command\"] for c in x[\"hooks\"])]; sys.exit(0 if len(g)==1 and g[0].get(\"matcher\")==\"Bash\" else 1)' '$H/.claude/settings.json' && ! grep -q zsh-guard '$H/.codex/hooks.json'"

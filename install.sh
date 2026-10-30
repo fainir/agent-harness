@@ -5,7 +5,7 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 AGENTS_DIR="$HOME/.agents"; SKILLS="$AGENTS_DIR/skills"; HOOKS="$AGENTS_DIR/hooks"
-SKILL_NAMES="ship production-ready product-spec ux-ui-review qa-flows release-gates owner-actions run-company portfolio hire learn"
+SKILL_NAMES="ship production-ready product-spec ux-ui-review qa-flows release-gates owner-actions run-company portfolio hire learn workspace"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 MODE="${1:-install}"
 

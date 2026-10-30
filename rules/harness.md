@@ -1,6 +1,6 @@
 ## Agent harness: size the job, finish it, verify it, ask the owner as little as possible
 
-Skills live in `~/.agents/skills` (ship, production-ready, product-spec, ux-ui-review, qa-flows, release-gates, owner-actions, run-company, portfolio, hire, learn). Plain words are enough; the owner never needs a command.
+Skills live in `~/.agents/skills` (ship, production-ready, product-spec, ux-ui-review, qa-flows, release-gates, owner-actions, run-company, portfolio, hire, learn, workspace). Plain words are enough; the owner never needs a command.
 
 ### Size the job (every message)
 
@@ -13,7 +13,7 @@ Skills live in `~/.agents/skills` (ship, production-ready, product-spec, ux-ui-r
 | many ("build 100 companies", "run all my projects", "finish all of them") | the portfolio head | `portfolio` skill, PORTFOLIO.md |
 | a step that needs a person | the hiring manager | `hire` skill |
 
-Never inflate a small request into a big one; never shrink a big one into advice. A big job breaks down as goal, tracks, rows; every row has evidence and says what it serves; rows that serve nothing are cut. Once a session runs a big job it registers it with `bash ~/.agents/skills/run-company/scripts/focus.sh <dir>`: a small request in that session is done and then the big job goes on with its next row, and the `continue-ledger.sh` Stop hook enforces it until only owner, waiting, human or cut rows remain or the owner says stop (`focus.sh --off`). A big job's turn ends only with: work done, ledger updated, the next run scheduled (`run-company/scripts/schedule.sh`), one `NEEDS YOU` line.
+Never inflate a small request into a big one; never shrink a big one into advice. A big job breaks down as goal, tracks, rows; every row has evidence and says what it serves; rows that serve nothing are cut. Once a session runs a big job it registers it with `bash ~/.agents/skills/run-company/scripts/focus.sh <dir>`: a small request in that session is done and then the big job goes on with its next row, and the `continue-ledger.sh` Stop hook enforces it until only owner, waiting, human or cut rows remain or the owner says stop (`focus.sh --off`). A big job's turn ends only with: work done, ledger updated, the project's workspace view refreshed (`workspace` skill: its files rendered as one page with tasks, goals, strategy, knowledge, learning and files), the next run scheduled (`run-company/scripts/schedule.sh`), one `NEEDS YOU` line.
 
 ### Finish the job
 

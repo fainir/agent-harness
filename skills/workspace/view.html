@@ -1,0 +1,352 @@
+<title>Project Workspace</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a project binder. Sticky header with tabs; summary first, then lanes of index cards; documents read in a two-pane reader. */
+:root {
+  --bg: #f3f4f7; --surface: #ffffff; --raised: #f8f9fb; --ink: #191c22; --muted: #5b6372; --line: #dde1e8;
+  --accent: #2a55c9; --accent-soft: #e5ebfa; --accent-ink: #ffffff;
+  --st-todo: #6b7280; --st-building: #2a55c9; --st-waiting: #b26b00; --st-owner: #c2341f; --st-human: #7b4fc9; --st-verified: #19804a; --st-cut: #9aa1ac;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+  --body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1217; --surface: #161a21; --raised: #1b2029; --ink: #e6e8ed; --muted: #9aa3b1; --line: #29303b;
+  --accent: #86a2ff; --accent-soft: #1d2741; --accent-ink: #0f1217;
+  --st-todo: #9aa3b1; --st-building: #86a2ff; --st-waiting: #f0a63a; --st-owner: #ff7b66; --st-human: #b495ff; --st-verified: #4cc98a; --st-cut: #6c7480;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0f1217; --surface: #161a21; --raised: #1b2029; --ink: #e6e8ed; --muted: #9aa3b1; --line: #29303b;
+  --accent: #86a2ff; --accent-soft: #1d2741; --accent-ink: #0f1217;
+  --st-todo: #9aa3b1; --st-building: #86a2ff; --st-waiting: #f0a63a; --st-owner: #ff7b66; --st-human: #b495ff; --st-verified: #4cc98a; --st-cut: #6c7480;
+  color-scheme: dark }
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body); margin: 0 }
+a { color: var(--accent) }
+code { font: 0.86em var(--mono); background: var(--raised); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px }
+.wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); max-width: 1320px; margin: 0 auto }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface) }
+header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line) }
+.top .wrap { padding-block: 14px 0; display: grid; gap: 8px }
+.title-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 14px }
+h1 { font: 700 clamp(22px, 3.2vw, 30px)/1.1 var(--display); margin: 0; letter-spacing: -0.01em; text-wrap: balance }
+.pill { font: 500 12px/1 var(--body); padding: 5px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); text-transform: uppercase; letter-spacing: 0.06em }
+.meta { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; gap: 4px 14px }
+.meta a { color: var(--muted) }
+nav.tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; margin-top: 4px }
+nav.tabs::-webkit-scrollbar { display: none }
+nav.tabs button { font: 500 14px var(--body); color: var(--muted); background: none; border: 0; border-bottom: 2px solid transparent; padding: 10px 12px; cursor: pointer; white-space: nowrap }
+nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent) }
+nav.tabs button:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+main .wrap { padding-block: 22px 60px }
+section.view { display: grid; gap: 22px; grid-template-columns: minmax(0, 1fr) }
+section.view > * { min-width: 0 }
+h2 { font: 600 13px var(--body); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 10px }
+h3 { font: 700 18px/1.25 var(--display); margin: 0 }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; min-width: 0 }
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); align-items: start }
+.goal { font: 500 17px/1.5 var(--body); max-width: 75ch; margin: 0 }
+.thesis { color: var(--muted); margin: 8px 0 0; max-width: 75ch }
+.kpis { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)) }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 4px; min-width: 0; align-content: start }
+.kpi .label { font-size: 13px; color: var(--muted) }
+.kpi .value { font: 700 26px/1.15 var(--display); font-variant-numeric: tabular-nums; overflow-wrap: anywhere }
+.kpi .value.long { font: 600 16px/1.35 var(--body) }
+.needs details summary { cursor: pointer; color: var(--accent); font-size: 13.5px; margin-top: 6px }
+.goal::first-letter { text-transform: uppercase }
+.kpi .sub { font-size: 12.5px; color: var(--muted) }
+.needs { border-left: 4px solid var(--st-owner) }
+.needs .lead { font-weight: 600; margin: 0 0 6px }
+.bar { display: flex; height: 12px; border-radius: 999px; overflow: hidden; background: var(--raised); border: 1px solid var(--line) }
+.bar span { display: block; height: 100% }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 13px; color: var(--muted) }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0 }
+ul.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px }
+ul.list li { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: baseline; min-width: 0 }
+ul.list li > div { min-width: 0; overflow-wrap: anywhere }
+.date { font: 12.5px var(--mono); color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums }
+.idchip { font: 500 11.5px var(--mono); padding: 2px 6px; border-radius: 5px; background: var(--raised); border: 1px solid var(--line); color: var(--muted); white-space: nowrap }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+.chip { font: 500 13px var(--body); padding: 6px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent) }
+input[type="search"], select { font: 14px var(--body); padding: 7px 11px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); min-width: 0 }
+input[type="search"] { flex: 1 1 200px }
+.board-scroll { overflow-x: auto; padding-bottom: 6px; max-width: 100% }
+.board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(250px, 1fr); gap: 12px; min-width: min-content }
+.lane { background: var(--raised); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px; display: grid; gap: 8px; align-content: start; min-width: 0 }
+.lane-head { display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 14px; padding: 2px 4px }
+.lane-head .n { font: 12px var(--mono); color: var(--muted) }
+.card { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--st, var(--st-todo)); border-radius: 8px; padding: 10px 11px; display: grid; gap: 6px; text-align: left; font: inherit; color: inherit; cursor: pointer; width: 100% }
+.card .t { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; font-size: 14px; overflow-wrap: anywhere }
+.card[aria-expanded="true"] .t { -webkit-line-clamp: unset; display: block }
+.card .m { font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 10px }
+.card .more { display: none; font-size: 13px; color: var(--ink); border-top: 1px dashed var(--line); padding-top: 6px; overflow-wrap: anywhere }
+.card[aria-expanded="true"] .more { display: grid; gap: 4px }
+.more b { color: var(--muted); font-weight: 500 }
+.empty { color: var(--muted); font-size: 13px; padding: 6px 4px }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface) }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top }
+th { font: 600 12px var(--body); color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; background: var(--raised); position: sticky; top: 0 }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right }
+.status { font: 500 12px var(--body); padding: 2px 8px; border-radius: 999px; color: #fff; background: var(--st, var(--st-todo)); white-space: nowrap }
+.reader { display: grid; grid-template-columns: minmax(220px, 300px) 1fr; gap: 16px; align-items: start }
+@media (max-width: 760px) { .reader { grid-template-columns: 1fr } }
+.doclist { display: grid; gap: 4px; max-height: 70vh; overflow-y: auto; padding-right: 4px }
+.doclist .g { font: 600 12px var(--body); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 10px 4px 2px }
+.doclist button { text-align: left; font: 14px var(--body); color: var(--ink); background: none; border: 0; padding: 7px 9px; border-radius: 7px; cursor: pointer; display: grid; gap: 1px }
+.doclist button small { color: var(--muted); font-size: 12px }
+.doclist button[aria-current="true"] { background: var(--accent-soft); color: var(--accent) }
+.doc { min-width: 0; max-width: 820px }
+.doc h1, .doc h2, .doc h3 { font-family: var(--display); color: var(--ink); text-transform: none; letter-spacing: 0 }
+.doc h1 { font-size: 26px } .doc h2 { font-size: 20px; margin-top: 24px } .doc h3 { font-size: 17px }
+.doc p, .doc li { max-width: 72ch } .doc table { margin: 10px 0 } .doc pre { overflow-x: auto; background: var(--raised); padding: 10px; border-radius: 8px }
+.doc .tw { overflow-x: auto }
+.bars { display: grid; gap: 7px }
+.bars .row { display: grid; grid-template-columns: minmax(90px, 30%) 1fr auto; gap: 10px; align-items: center; font-size: 13.5px; min-width: 0 }
+.bars .track { height: 10px; background: var(--raised); border-radius: 999px; overflow: hidden; border: 1px solid var(--line) }
+.bars .fill { height: 100%; background: var(--accent); border-radius: 999px }
+.bars .lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.bars .v { font: 12.5px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums }
+.foot { color: var(--muted); font-size: 12.5px; margin-top: 24px }
+@media (prefers-reduced-motion: no-preference) { .card { transition: border-color .15s, box-shadow .15s } .card:hover { box-shadow: 0 2px 10px rgba(0,0,0,.06) } }
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="title-row"><h1 id="name">Workspace</h1><span class="pill" id="stage" hidden></span></div>
+    <div class="meta" id="meta"></div>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Workspace views"></nav>
+  </div>
+</header>
+<main><div class="wrap" id="views"></div></main>
+
+<script id="ws-data" type="application/json">__WORKSPACE_DATA__</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script>
+(function () {
+  var D = JSON.parse(document.getElementById('ws-data').textContent);
+  var P = D.project || {};
+  var STATUS = [['todo', 'To do'], ['building', 'Building'], ['waiting', 'Waiting'], ['owner', 'Needs you'], ['human', 'With a person'], ['verified', 'Done'], ['cut', 'Cut']];
+  var KNOWN = STATUS.map(function (s) { return s[0]; });
+  function norm(s) { return KNOWN.indexOf(s) >= 0 ? s : (s === 'defect' ? 'todo' : 'todo'); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function inline(s) {
+    var t = esc(s);
+    t = t.replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+    t = t.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    t = t.replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
+    return t;
+  }
+  function md(text) {
+    if (window.marked && window.marked.parse) {
+      var html = window.marked.parse(text || '');
+      return html.replace(/<table>/g, '<div class="tw"><table>').replace(/<\/table>/g, '</table></div>');
+    }
+    return '<pre style="white-space:pre-wrap">' + esc(text) + '</pre>';
+  }
+  function bytes(n) { return n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(1) + ' KB' : (n / 1048576).toFixed(1) + ' MB'; }
+  function el(tag, attrs, html) { var e = document.createElement(tag); for (var k in (attrs || {})) e.setAttribute(k, attrs[k]); if (html != null) e.innerHTML = html; return e; }
+  function stVar(s) { return 'var(--st-' + norm(s) + ')'; }
+
+  document.title = (P.name || 'Project') + ' Workspace';
+  document.getElementById('name').textContent = P.name || 'Workspace';
+  if (P.stage) { var st = document.getElementById('stage'); st.textContent = P.stage.split(/[\s(]/)[0]; st.title = P.stage; st.hidden = false; }
+  var meta = [];
+  meta.push('Updated ' + esc((P.generated || '').replace('T', ' ')));
+  if (P.repo) meta.push('<a href="' + esc(P.repo) + '" target="_blank" rel="noopener">Repository</a>');
+  (D.links || []).slice(0, 3).forEach(function (u) { meta.push('<a href="' + esc(u) + '" target="_blank" rel="noopener">' + esc(u.replace(/^https?:\/\//, '').replace(/\/$/, '')) + '</a>'); });
+  document.getElementById('meta').innerHTML = meta.map(function (m) { return '<span>' + m + '</span>'; }).join('');
+
+  var rows = (D.rows || []).map(function (r) { r.st = norm(r.status); return r; });
+  var views = [
+    ['overview', 'Overview', overview], ['tasks', 'Tasks', tasks], ['strategy', 'Strategy', strategy],
+    ['knowledge', 'Knowledge', knowledge], ['learning', 'Learning', learning], ['files', 'Files', files], ['activity', 'Activity', activity]
+  ];
+  (D.extra || []).forEach(function (x, i) { views.splice(1 + i, 0, ['x-' + (x.id || i), x.title || 'Live', function (s) { extra(s, x); }]); });
+
+  var tabs = document.getElementById('tabs'), host = document.getElementById('views'), built = {};
+  views.forEach(function (v) {
+    var b = el('button', { role: 'tab', id: 'tab-' + v[0], 'aria-controls': 'view-' + v[0], 'aria-selected': 'false', type: 'button' }, esc(v[1]));
+    b.addEventListener('click', function () { show(v[0]); try { history.replaceState(null, '', '#' + v[0]); } catch (e) { location.hash = v[0]; } });
+    tabs.appendChild(b);
+    var s = el('section', { class: 'view', id: 'view-' + v[0], role: 'tabpanel', 'aria-labelledby': 'tab-' + v[0] }); s.hidden = true; host.appendChild(s);
+  });
+  function show(id) {
+    if (!views.some(function (v) { return v[0] === id; })) id = 'overview';
+    views.forEach(function (v) {
+      var on = v[0] === id; document.getElementById('tab-' + v[0]).setAttribute('aria-selected', on ? 'true' : 'false');
+      var s = document.getElementById('view-' + v[0]); s.hidden = !on;
+      if (on && !built[id]) { v[2](s); built[id] = true; }
+    });
+  }
+  show((location.hash || '#overview').slice(1));
+  window.addEventListener('hashchange', function () { show((location.hash || '#overview').slice(1)); });
+
+  function overview(s) {
+    var h = '';
+    if (P.goal || P.thesis) h += '<div class="panel">' + (P.goal ? '<p class="goal">' + inline(P.goal) + '</p>' : '') + (P.thesis ? '<p class="thesis">' + inline(P.thesis) + '</p>' : '') + '</div>';
+    if ((D.kpis || []).length) {
+      h += '<div><h2>Numbers</h2><div class="kpis">' + D.kpis.map(function (k) {
+        return '<div class="kpi"><span class="label">' + inline(k.kpi) + '</span><span class="value' + (String(k.now).length > 14 ? ' long' : '') + '">' + inline(k.now) + '</span><span class="sub">Target ' + inline(k.target) + (k.by ? ' by ' + esc(k.by) : '') + (k.source ? ' &middot; ' + inline(k.source) : '') + '</span></div>';
+      }).join('') + '</div></div>';
+    }
+    var open = (D.owner_actions || []).filter(function (a) { return !a.done; });
+    var grid = '';
+    var ask = open.length ? open[0].text : '', cut = ask.length > 240 ? (ask.indexOf(' ', 200) > 0 ? ask.indexOf(' ', 200) : 240) : 0;
+    if (open.length) grid += '<div class="panel needs"><h2>Needs you</h2>' + (cut ? '<p class="lead">' + inline(ask.slice(0, cut)) + '&hellip;</p><details><summary>Show all</summary><p>' + inline(ask) + '</p></details>' : '<p class="lead">' + inline(ask) + '</p>') + '<p class="date">' + (open.length > 1 ? (open.length - 1) + ' more owner action' + (open.length > 2 ? 's' : '') + ' after this one' : 'The only open owner action') + '</p></div>';
+    if (rows.length) {
+      var counts = {}; rows.forEach(function (r) { counts[r.st] = (counts[r.st] || 0) + 1; });
+      grid += '<div class="panel"><h2>Progress</h2><div class="bar" role="img" aria-label="Rows by status">' + STATUS.map(function (x) {
+        return counts[x[0]] ? '<span style="width:' + (100 * counts[x[0]] / rows.length) + '%;background:' + stVar(x[0]) + '" title="' + esc(x[1]) + ' ' + counts[x[0]] + '"></span>' : '';
+      }).join('') + '</div><div class="legend">' + STATUS.filter(function (x) { return counts[x[0]]; }).map(function (x) {
+        return '<span><span class="dot" style="background:' + stVar(x[0]) + '"></span>' + esc(x[1]) + ' ' + counts[x[0]] + '</span>';
+      }).join('') + '</div></div>';
+    }
+    if (grid) h += '<div class="grid">' + grid + '</div>';
+    var next = rows.filter(function (r) { return r.st === 'todo' || r.st === 'building' || r.st === 'waiting'; }).sort(function (a, b) { return String(a.due).localeCompare(String(b.due)); }).slice(0, 8);
+    var recent = (D.log || []).slice().sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); }).slice(0, 6);
+    h += '<div class="grid"><div class="panel"><h2>Up next</h2>' + (next.length ? '<ul class="list">' + next.map(function (r) {
+      return '<li><span class="idchip">' + esc(r.id) + '</span><div>' + inline(r.title) + '<div class="date">' + esc(r.st) + (r.due ? ' &middot; ' + esc(r.due) : '') + '</div></div></li>';
+    }).join('') + '</ul>' : '<p class="empty">Nothing open: every row is done, waiting on someone or cut.</p>') + '</div>';
+    h += '<div class="panel"><h2>Recent</h2>' + (recent.length ? '<ul class="list">' + recent.map(function (l) { return '<li><span class="date">' + esc(l.date) + '</span><div>' + inline(l.text) + '</div></li>'; }).join('') + '</ul>' : '<p class="empty">No log lines yet.</p>') + '</div></div>';
+    s.innerHTML = h;
+  }
+
+  function tasks(s) {
+    var sources = Array.from(new Set(rows.map(function (r) { return r.source; })));
+    var state = { source: 'all', q: '', mode: 'board' };
+    try { state.mode = localStorage.getItem('ws-mode') || 'board'; } catch (e) {}
+    s.innerHTML = '<div class="toolbar" id="tb"></div><div id="tasks-body"></div>';
+    var tb = s.querySelector('#tb');
+    var chips = [['all', 'All (' + rows.length + ')']].concat(sources.map(function (x) { return [x, x + ' (' + rows.filter(function (r) { return r.source === x; }).length + ')']; }));
+    chips.forEach(function (c) {
+      var b = el('button', { class: 'chip', type: 'button', 'aria-pressed': c[0] === 'all' ? 'true' : 'false' }, esc(c[1]));
+      b.addEventListener('click', function () { state.source = c[0]; tb.querySelectorAll('.chip[data-src]').forEach(function (x) { x.setAttribute('aria-pressed', x.dataset.src === c[0] ? 'true' : 'false'); }); render(); });
+      b.dataset.src = c[0]; tb.appendChild(b);
+    });
+    var q = el('input', { type: 'search', id: 'task-search', placeholder: 'Search tasks', 'aria-label': 'Search tasks' });
+    q.addEventListener('input', function () { state.q = q.value.toLowerCase(); render(); }); tb.appendChild(q);
+    var mode = el('select', { id: 'task-mode', 'aria-label': 'View' }, '<option value="board">Board</option><option value="table">Table</option>');
+    mode.value = state.mode; mode.addEventListener('change', function () { state.mode = mode.value; try { localStorage.setItem('ws-mode', state.mode); } catch (e) {} render(); }); tb.appendChild(mode);
+    function render() {
+      var list = rows.filter(function (r) { return (state.source === 'all' || r.source === state.source) && (!state.q || JSON.stringify(r).toLowerCase().indexOf(state.q) >= 0); });
+      var body = s.querySelector('#tasks-body');
+      if (state.mode === 'table') {
+        body.innerHTML = '<div class="table-wrap"><table><thead><tr><th>ID</th><th>Task</th><th>Status</th><th>Track</th><th>Due</th><th>Evidence</th></tr></thead><tbody>' + list.map(function (r) {
+          return '<tr><td><span class="idchip">' + esc(r.id) + '</span></td><td>' + inline(r.title) + '</td><td><span class="status" style="--st:' + stVar(r.st) + '">' + esc(r.st) + '</span></td><td>' + inline(r.track) + '</td><td class="date">' + esc(r.due) + '</td><td>' + inline(r.evidence) + '</td></tr>';
+        }).join('') + '</tbody></table></div>';
+        return;
+      }
+      body.innerHTML = '<div class="board-scroll"><div class="board">' + STATUS.map(function (x) {
+        var lane = list.filter(function (r) { return r.st === x[0]; });
+        if (!lane.length && (x[0] === 'human' || x[0] === 'cut')) return '';
+        return '<div class="lane"><div class="lane-head"><span><span class="dot" style="background:' + stVar(x[0]) + '"></span>' + esc(x[1]) + '</span><span class="n">' + lane.length + '</span></div>' + (lane.length ? lane.map(function (r, i) {
+          return '<button class="card" type="button" aria-expanded="false" style="--st:' + stVar(r.st) + '"><span class="m"><span class="idchip">' + esc(r.id) + '</span><span>' + inline(r.track) + '</span>' + (r.due ? '<span>' + esc(r.due) + '</span>' : '') + '</span><span class="t">' + inline(r.title) + '</span><span class="more">' +
+            (r.serves ? '<span><b>Serves</b> ' + inline(r.serves) + '</span>' : '') + (r.owner ? '<span><b>Owner</b> ' + inline(r.owner) + '</span>' : '') + (r.status_text && r.status_text.toLowerCase() !== r.st ? '<span><b>Status</b> ' + inline(r.status_text) + '</span>' : '') +
+            (r.evidence ? '<span><b>Evidence</b> ' + inline(r.evidence) + '</span>' : '') + '<span><b>From</b> ' + esc(r.source) + '</span></span></button>';
+        }).join('') : '<p class="empty">None</p>') + '</div>';
+      }).join('') + '</div></div>';
+      body.querySelectorAll('.card').forEach(function (c) { c.addEventListener('click', function (e) { if (e.target.closest('a')) return; c.setAttribute('aria-expanded', c.getAttribute('aria-expanded') === 'true' ? 'false' : 'true'); }); });
+    }
+    render();
+  }
+
+  function strategy(s) {
+    var goalDoc = (D.docs || []).filter(function (d) { return d.path === 'GOAL.md'; })[0];
+    var bets = rows.filter(function (r) { return /^B\d+/.test(r.id) || /^bet:/i.test(r.title); });
+    var h = '<div class="grid">';
+    h += '<div class="panel doc">' + (goalDoc ? md(goalDoc.md) : '<h3>Goal</h3><p>' + inline(P.goal || 'No GOAL.md yet.') + '</p>') + '</div>';
+    h += '<div class="panel"><h2>Bets and the numbers that decide them</h2>' + (bets.length ? '<ul class="list">' + bets.map(function (r) { return '<li><span class="idchip">' + esc(r.id) + '</span><div>' + inline(r.title) + '<div class="date">' + esc(r.st) + (r.due ? ' &middot; read ' + esc(r.due) : '') + '</div></div></li>'; }).join('') + '</ul>' : '<p class="empty">No bets recorded. A bet row names its hypothesis, the number that decides it and the read date.</p>') + '</div></div>';
+    var dec = (D.decisions || []).slice().sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
+    h += '<div class="panel"><h2>Decisions</h2>' + (dec.length ? '<ul class="list">' + dec.map(function (d) { return '<li><span class="date">' + esc(d.date) + '</span><div>' + inline(d.text) + '</div></li>'; }).join('') + '</ul>' : '<p class="empty">No decisions logged yet.</p>') + '</div>';
+    var w = D.waiting || [];
+    if (w.length) h += '<div class="panel"><h2>Waiting on others</h2><div class="table-wrap"><table><thead><tr><th>What</th><th>Since</th><th>Next check</th><th>Notes</th></tr></thead><tbody>' + w.map(function (x) { return '<tr><td>' + inline(x.what) + '</td><td class="date">' + esc(x.since) + '</td><td class="date">' + esc(x.next) + '</td><td>' + inline(x.notes) + '</td></tr>'; }).join('') + '</tbody></table></div></div>';
+    var oa = D.owner_actions || [];
+    if (oa.length) h += '<div class="panel"><h2>Owner actions</h2><ul class="list">' + oa.map(function (a, i) { return '<li><span class="status" style="--st:' + (a.done ? 'var(--st-verified)' : 'var(--st-owner)') + '">' + (a.done ? 'done' : 'open') + '</span><div>' + inline(a.text) + '</div></li>'; }).join('') + '</ul></div>';
+    s.innerHTML = h;
+  }
+
+  function knowledge(s) {
+    var docs = D.docs || [];
+    if (!docs.length) { s.innerHTML = '<p class="empty">No documents yet.</p>'; return; }
+    var groups = {}; docs.forEach(function (d, i) { (groups[d.group] = groups[d.group] || []).push(i); });
+    s.innerHTML = '<div class="toolbar"><input type="search" id="doc-search" placeholder="Search documents" aria-label="Search documents"></div><div class="reader"><div class="panel doclist" id="doclist"></div><article class="panel doc" id="doc"></article></div>';
+    var list = s.querySelector('#doclist'), view = s.querySelector('#doc'), cur = docs.findIndex(function (d) { return d.path === 'GOAL.md'; });
+    if (cur < 0) cur = 0;
+    function renderList(q) {
+      list.innerHTML = Object.keys(groups).map(function (g) {
+        var ids = groups[g].filter(function (i) { return !q || (docs[i].title + ' ' + docs[i].path + ' ' + docs[i].md).toLowerCase().indexOf(q) >= 0; });
+        return ids.length ? '<div class="g">' + esc(g) + '</div>' + ids.map(function (i) { return '<button type="button" data-i="' + i + '" aria-current="' + (i === cur ? 'true' : 'false') + '">' + esc(docs[i].title) + '<small>' + esc(docs[i].path) + ' &middot; ' + esc(docs[i].updated) + '</small></button>'; }).join('') : '';
+      }).join('') || '<p class="empty">No document matches.</p>';
+      list.querySelectorAll('button').forEach(function (b) { b.addEventListener('click', function () { cur = +b.dataset.i; renderDoc(); renderList(q); }); });
+    }
+    function renderDoc() { var d = docs[cur]; view.innerHTML = md(d.md) + (d.truncated ? '<p class="empty">Shortened here; the full file is ' + esc(d.path) + ' in the repository.</p>' : ''); }
+    s.querySelector('#doc-search').addEventListener('input', function (e) { renderList(e.target.value.toLowerCase()); });
+    renderList(''); renderDoc();
+  }
+
+  function learning(s) {
+    var h = '<div class="grid">';
+    var les = D.lessons || [];
+    h += '<div class="panel"><h2>What this project has learned</h2>' + (les.length ? '<ul class="list">' + les.map(function (l) { return '<li><span class="dot" style="background:var(--accent)"></span><div>' + inline(l.text) + '</div></li>'; }).join('') + '</ul>' : '<p class="empty">No lessons in AGENTS.md "Working here" yet.</p>') + '</div>';
+    var runs = D.runs || [];
+    if (runs.length) {
+      var max = Math.max.apply(null, runs.map(function (r) { return +r.total || 0; }).concat([1]));
+      h += '<div class="panel"><h2>Runs: verified of total rows</h2><div class="bars">' + runs.slice(-12).map(function (r) {
+        var v = +r.verified || 0, t = +r.total || 0;
+        return '<div class="row"><span class="lbl date">' + esc(r.date) + ' ' + esc(r.tool) + '</span><span class="track"><span class="fill" style="display:block;width:' + (100 * v / max) + '%"></span></span><span class="v">' + v + '/' + t + '</span></div>';
+      }).join('') + '</div></div>';
+    }
+    h += '</div>';
+    var L = D.learnings || [];
+    h += '<div class="panel"><h2>Lessons logged for the shared harness</h2>' + (L.length ? '<div class="table-wrap"><table><thead><tr><th>Date</th><th>What happened</th><th>Root cause</th><th>Change</th><th>Status</th></tr></thead><tbody>' + L.slice().reverse().map(function (x) { return '<tr><td class="date">' + esc(x.date) + '</td><td>' + inline(x.what) + '</td><td>' + inline(x.cause) + '</td><td>' + inline(x.change) + '</td><td>' + inline(x.status) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="empty">None for this project.</p>') + '</div>';
+    var A = D.owner_asks || [];
+    if (A.length) h += '<div class="panel"><h2>What the owner was asked</h2><ul class="list">' + A.slice().reverse().map(function (a) { return '<li><span class="date">' + esc(a.date) + '</span><div>' + inline(a.what) + '<div class="date">' + esc(a.class) + '</div></div></li>'; }).join('') + '</ul></div>';
+    s.innerHTML = h;
+  }
+
+  function files(s) {
+    var F = D.files || [];
+    var tops = {}; F.forEach(function (f) { var t = f.path.indexOf('/') > 0 ? f.path.split('/')[0] + '/' : '(root)'; tops[t] = tops[t] || { n: 0, size: 0 }; tops[t].n++; tops[t].size += f.size; });
+    var link = function (p) { return P.repo ? '<a href="' + esc(P.repo + '/blob/' + (P.branch || 'main') + '/' + p) + '" target="_blank" rel="noopener">' + esc(p) + '</a>' : esc(p); };
+    s.innerHTML = '<div class="panel"><h2>Folders</h2><div class="bars">' + Object.keys(tops).sort(function (a, b) { return tops[b].n - tops[a].n; }).map(function (t) {
+      var max = Math.max.apply(null, Object.keys(tops).map(function (k) { return tops[k].n; }));
+      return '<div class="row"><span class="lbl">' + esc(t) + '</span><span class="track"><span class="fill" style="display:block;width:' + (100 * tops[t].n / max) + '%"></span></span><span class="v">' + tops[t].n + ' files &middot; ' + bytes(tops[t].size) + '</span></div>';
+    }).join('') + '</div></div><div class="toolbar"><input type="search" id="file-search" placeholder="Filter ' + F.length + ' files" aria-label="Filter files"></div><div class="table-wrap" id="file-table"></div>';
+    function render(q) {
+      var list = F.filter(function (f) { return !q || f.path.toLowerCase().indexOf(q) >= 0; }).sort(function (a, b) { return String(b.modified).localeCompare(String(a.modified)) || a.path.localeCompare(b.path); });
+      s.querySelector('#file-table').innerHTML = '<table><thead><tr><th>File</th><th>Size</th><th>Changed</th></tr></thead><tbody>' + list.slice(0, 400).map(function (f) { return '<tr><td>' + link(f.path) + '</td><td class="num">' + bytes(f.size) + '</td><td class="date">' + esc(f.modified) + '</td></tr>'; }).join('') + '</tbody></table>' + (list.length > 400 ? '<p class="empty" style="padding:8px 10px">Showing 400 of ' + list.length + '; filter to narrow.</p>' : '');
+    }
+    s.querySelector('#file-search').addEventListener('input', function (e) { render(e.target.value.toLowerCase()); });
+    render('');
+  }
+
+  function activity(s) {
+    var C = D.commits || [];
+    var h = '<div class="grid"><div class="panel"><h2>Commits</h2>' + (C.length ? '<ul class="list">' + C.map(function (c) { return '<li><span class="date">' + esc(c.date) + '</span><div>' + (P.repo ? '<a class="idchip" href="' + esc(P.repo + '/commit/' + c.hash) + '" target="_blank" rel="noopener">' + esc(c.hash) + '</a> ' : '') + esc(c.subject) + '</div></li>'; }).join('') + '</ul>' : '<p class="empty">No git history.</p>') + '</div>';
+    var lg = (D.log || []).slice().sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
+    h += '<div class="panel"><h2>Log</h2>' + (lg.length ? '<ul class="list">' + lg.map(function (l) { return '<li><span class="date">' + esc(l.date) + '</span><div>' + inline(l.text) + '<div class="date">' + esc(l.source) + '</div></div></li>'; }).join('') + '</ul>' : '<p class="empty">No log lines yet.</p>') + '</div></div>';
+    s.innerHTML = h;
+  }
+
+  function extra(s, x) {
+    var h = x.note ? '<p class="thesis" style="margin:0">' + inline(x.note) + '</p>' : '';
+    if (x.kind === 'kpis') h += '<div class="kpis">' + (x.items || []).map(function (k) { return '<div class="kpi"><span class="label">' + inline(k.label) + '</span><span class="value">' + inline(k.value) + '</span>' + (k.note ? '<span class="sub">' + inline(k.note) + '</span>' : '') + '</div>'; }).join('') + '</div>';
+    if (x.kind === 'bars' || x.bars) {
+      var B = x.bars || x.items || [], max = Math.max.apply(null, B.map(function (b) { return +b.value || 0; }).concat([1]));
+      h += '<div class="panel">' + (x.bars_title ? '<h2>' + esc(x.bars_title) + '</h2>' : '') + (B.length ? '<div class="bars">' + B.map(function (b) { return '<div class="row"><span class="lbl">' + esc(b.label) + '</span><span class="track"><span class="fill" style="display:block;width:' + (100 * (+b.value || 0) / max) + '%"></span></span><span class="v">' + esc(b.value) + '</span></div>'; }).join('') + '</div>' : '<p class="empty">' + esc(x.empty || 'No data yet.') + '</p>') + '</div>';
+    }
+    if (x.kind === 'table' || x.table) {
+      var T = x.table || x; h += '<div class="table-wrap"><table><thead><tr>' + (T.columns || []).map(function (c) { return '<th>' + esc(c) + '</th>'; }).join('') + '</tr></thead><tbody>' + (T.rows || []).map(function (r) { return '<tr>' + r.map(function (v) { return '<td>' + inline(v) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
+    }
+    if (x.kind === 'markdown' || x.md) h += '<div class="panel doc">' + md(x.md || '') + '</div>';
+    s.innerHTML = h;
+  }
+})();
+</script>

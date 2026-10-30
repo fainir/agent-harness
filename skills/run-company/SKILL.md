@@ -36,7 +36,7 @@ Row rule: every row says what it serves (a KPI or a GOAL.md line). A row that se
 2. Pick the highest-leverage row that is not verified, human, owner or waiting. Order: money coming in (collect, close, fix checkout), customers in pain (support, defects), growth measurable this week, product rows from READINESS.md, then ops. A row due today beats everything. With zero outside visitors or sales, distribution outranks more product: direct outreach to real people and one measured channel test come before a new product or edition.
 3. Do it. Product rows: the ship loop in that product's folder. Growth and sales: real channels, real posts, real messages, inside OWNER.md. Support: the real inbox. Money: the real dashboards and invoices. People: the hire skill.
 4. Verify with evidence (URL, screenshot under qa/, message ID, dashboard number). No evidence, no verified.
-5. Update the row, the Numbers if they moved, a Decision line if you chose between options, one Log line. Commit and push.
+5. Update the row, the Numbers if they moved, a Decision line if you chose between options, one Log line. Refresh the workspace view (workspace skill). Commit and push.
 6. Next row. Keep going until the time box ends or nothing buildable remains. Then section 7.
 
 Technical problems are work. Business problems are rows: no traffic → a growth row with a channel test; no replies → a sales row with a changed message or segment; no money → a pricing or offer row. Never end a turn with "stuck".
