@@ -21,15 +21,15 @@ Before asking, check saved sign-ins (a credentials or account-access tool, if yo
 
 1. **Record** every owner-only item as a numbered line under `## Owner actions` in READINESS.md: `N. <where> -> <exact action> -> unblocks <rows>`. Mark the dependent rows `owner`.
 2. **Keep going** in the same turn on every row that does not depend on it.
-3. **Ask once, at the end of the turn**, for the single most unblocking item, in this exact shape:
+3. **Stage it, then ask once, at the end of the turn.** First do every step around the owner's click yourself: open the exact page in the owner's own browser, fill every field that is not a secret, payment detail or identity document, and start a watcher that notices when it is done. Never ask whether to open, prepare, deploy or continue something free and reversible; that question is itself an unnecessary ask. Then ask for the single most unblocking item, naming the tab already open, in this exact shape:
    ```
    NEEDS YOU (1 of <n>): <where, with URL or app name> -> <exact thing to click, type or send> -> unblocks <what>
    ```
    Never two. The rest stay in READINESS.md. Log the ask: `bash ~/.agents/skills/learn/scripts/owner-log.sh <project> <class> "<what>" "<how to never ask this again>"` (class: sign-in, money, new-account, signature, identity, decision, physical, other). If the same ask would come back, add the rule that removes it to OWNER.md under "Standing rules proposed by the agent" and let the NEEDS YOU end with "answer yes to make it standing".
 4. **Notify** if the owner may be away: Claude Code uses the PushNotification tool with that one line; a Codex automation notifies once. Never notify for "no change".
-5. **When the owner says it is done**, verify it (log in, call the API, check the dashboard), mark the item done with the date, then ask for the next one.
+5. **When the owner says it is done**, verify it (log in, call the API, check the dashboard), finish what follows yourself (press a staged deploy, run the sync), mark the item done with the date, then ask for the next one.
 6. **Secrets**: never ask the owner to paste a password, code or key into the chat. Ask them to sign in themselves in the browser tab, add the key to `.env.local` or the platform's variables, or use saved sign-ins or a credentials tool.
 
 ## Wording
 
-Plain, specific, 30 seconds to read. Good: `NEEDS YOU (1 of 2): Railway -> open project "my-app", Variables, add RESEND_API_KEY from resend.com/api-keys -> unblocks F4 password reset email`. Bad: "You need to set up email, configure DNS and verify the domain."
+Plain, specific, 30 seconds to read. Good: `NEEDS YOU (1 of 2): Railway -> open project "my-app", Variables, add RESEND_API_KEY from resend.com/api-keys -> unblocks F4 password reset email`. Bad: "You need to set up email, configure DNS and verify the domain." When the owner must choose, list the options in the message or an in-app question, never a file path to open.
