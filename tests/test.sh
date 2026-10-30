@@ -55,6 +55,7 @@ check "continue-ledger: another session is never pushed" "[ \"\$(cl '{\"session_
 
 # 6. learn scripts
 L="$T/learnings"
+check "note.sh takes a single line too (the rules ask for one note.sh line)" "LEARNINGS_DIR='$L' bash '$HERE/skills/learn/scripts/note.sh' 'zsh did not split an unquoted variable' | grep -q noted && grep -q '| tool | zsh did not split an unquoted variable | zsh did not split' '$L/inbox.md'"
 check "note.sh counts a repeated root cause" "LEARNINGS_DIR='$L' bash '$HERE/skills/learn/scripts/note.sh' p qa 'x' 'init script misses the dev command' 'fix' >/dev/null && LEARNINGS_DIR='$L' bash '$HERE/skills/learn/scripts/note.sh' p2 qa 'y' 'init script misses the dev command' 'fix' | grep -q 'seen 2 times'"
 check "owner-log.sh counts asks by class" "LEARNINGS_DIR='$L' bash '$HERE/skills/learn/scripts/owner-log.sh' p sign-in 'sign in' 'save it once' | grep -q '1 of class'"
 check "run-log.sh logs a run" "LEARNINGS_DIR='$L' bash '$HERE/skills/learn/scripts/run-log.sh' p claude 5 7 1 1 0 30 | grep -q 'logged run 1'"

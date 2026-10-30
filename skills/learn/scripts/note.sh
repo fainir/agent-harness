@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 # Append one harness learning to the shared inbox (learn skill, section 1).
 # Usage: note.sh <project> <phase> "<what happened>" "<root cause>" "<proposed change>" ["<evidence>"]
+#        note.sh "<one line>"   (quick form: project = this repo or folder, phase tool, the line is also the root cause)
 # Phase: spec | build | ux | qa | gates | deploy | report | company | portfolio | hire | tool
 set -euo pipefail
-[ $# -ge 5 ] || { sed -n '3,4p' "$0"; exit 2; }
+if [ $# -eq 1 ]; then  # the rules say "one note.sh line"; take it rather than drop the lesson
+  top="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"; set -- "$(basename "$top")" tool "$1" "$1" "decide in the review"
+fi
+[ $# -ge 5 ] || { sed -n '3,5p' "$0" >&2; exit 2; }
 DIR="${LEARNINGS_DIR:-$HOME/.agents/learnings}"; mkdir -p "$DIR"; f="$DIR/inbox.md"
 [ -f "$f" ] || printf '# Learnings inbox\n\nOne row per harness friction, written by note.sh. Status: open | applied (date) | dropped (reason).\n\n| date | project | phase | what happened | root cause | proposed change | evidence | status |\n|---|---|---|---|---|---|---|---|\n' > "$f"
 clean() { printf '%s' "$1" | tr '\n|' '  ' | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//'; }
