@@ -24,6 +24,15 @@ if [ "$gate" = 1 ] && [ "${FORCE:-0}" != 1 ] && [ -f .runtime/idle.sig ] && [ -z
    && [ "$(signature)" = "$(cat .runtime/idle.sig)" ]; then  # rows are lines whose first cell is an ID, as in continue-ledger.sh
   echo "$(date +%Y%m%d-%H%M) $ledger idle: no buildable row and no change, model not run" >> .runtime/runs/summary.log; echo "idle: no change"; exit 0
 fi
+# Someone is working here (an open Claude Code or Codex session, or a person): a file changed in the last BUSY_MIN
+# minutes, after the last scheduled check. A second agent on the same checkout would collide with them; wait.
+BUSY_MIN="${BUSY_MIN:-30}"; busy=""; ref=""; [ -f .runtime/runs/summary.log ] && ref=.runtime/runs/summary.log
+if [ "$BUSY_MIN" -gt 0 ] && [ "${FORCE:-0}" != 1 ]; then  # BUSY_MIN=0 turns the check off (macOS find matches -mmin -0)
+  busy="$(find . \( -path ./.git -o -path ./.runtime -o -name node_modules \) -prune -o -type f -mmin -"$BUSY_MIN" ${ref:+-newer} ${ref:+"$ref"} -print 2>/dev/null | head -1)"
+fi
+if [ -n "$busy" ]; then
+  echo "$(date +%Y%m%d-%H%M) $ledger busy: ${busy#./} changed in the last $BUSY_MIN min, a session is working here" >> .runtime/runs/summary.log; echo "busy: a session is working here"; exit 0
+fi
 if [ -e "$lock" ] && [ -z "$(find "$lock" -mmin +"$LOCK_MIN" 2>/dev/null)" ]; then echo "busy: $lock is fresh, another run is on"; exit 0; fi
 STAMP="$(date +%Y%m%d-%H%M)"; log=".runtime/runs/$STAMP.log"; echo "$STAMP $$" > "$lock"
 (

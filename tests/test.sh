@@ -81,13 +81,17 @@ check "size: a skill missing from the rules block fails the budget" "! HOME='$T/
 IG="$T/ig"; mkdir -p "$IG/co" "$IG/bin"; printf '#!/bin/sh\necho run >> "%s/calls"\n' "$IG" > "$IG/bin/claude"; chmod +x "$IG/bin/claude"
 printf '| Product | Folder | Ledger | Stage |\n| Storefront | ./store | x | building |\n| ID | Track | Action | Serves | Owner | Status | Due | Evidence |\n| P1 | product | x | y | me | owner | - | - |\n' > "$IG/co/COMPANY.md"
 printf '#!/bin/sh\ncat "%s/state"\n' "$IG" > "$IG/co/signals.sh"; chmod +x "$IG/co/signals.sh"; echo a > "$IG/state"
-igrun() { PATH="$IG/bin:$PATH" TIMEOUT=30 bash "$HERE/skills/run-company/scripts/run.sh" "$IG/co" >/dev/null 2>&1; }
+igrun() { PATH="$IG/bin:$PATH" TIMEOUT=30 BUSY_MIN="${BUSY_MIN:-0}" bash "$HERE/skills/run-company/scripts/run.sh" "$IG/co" >/dev/null 2>&1; }
 igrun; igrun
 check "run.sh idle gate: the second run with nothing new spends no model run (a products table stage is not a row)" "[ \"\$(wc -l < '$IG/calls' | tr -d ' ')\" = 1 ]"
 echo b > "$IG/state"; igrun
 check "run.sh idle gate: a change in signals.sh wakes the model" "[ \"\$(wc -l < '$IG/calls' | tr -d ' ')\" = 2 ]"
 printf '| P2 | product | y | z | me | todo | - | - |\n' >> "$IG/co/COMPANY.md"; igrun; igrun
 check "run.sh idle gate: a buildable row always runs" "[ \"\$(wc -l < '$IG/calls' | tr -d ' ')\" = 4 ]"
+sleep 1; echo edit > "$IG/co/notes.md"; BUSY_MIN=30 igrun
+check "run.sh: a file changed by a working session keeps the scheduled run out of the folder" "[ \"\$(wc -l < '$IG/calls' | tr -d ' ')\" = 4 ] && grep -q 'busy: notes.md' '$IG/co/.runtime/runs/summary.log'"
+BUSY_MIN=30 igrun
+check "run.sh: once the session's edit is older than the last check, the scheduled run goes on" "[ \"\$(wc -l < '$IG/calls' | tr -d ' ')\" = 5 ]"
 
 # 6c. per-project learning and cross-project promotion
 PN="$T/pn"; mkdir -p "$PN/a/sub" "$PN/b"; printf '# a\n\n## Rules\n\n- keep it small\n' > "$PN/a/AGENTS.md"; (cd "$PN/b" && git init -q)
