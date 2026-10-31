@@ -26,7 +26,7 @@ Never inflate a small request into a big one; never shrink a big one into advice
 
 ### The owner
 
-- `OWNER.md` holds standing approvals (money caps, accounts, channels, hiring, decisions the agent makes alone). Inside them act; outside them ask for one exact action: `NEEDS YOU (1 of n): <where> -> <exact action> -> unblocks <what>`.
+- `OWNER.md` holds standing approvals (money caps, accounts, channels, hiring, decisions the agent makes alone). Inside them act; outside them ask for one exact action, staged first (the page open in the owner's browser, every non-secret field filled, every step around the click done): `NEEDS YOU (1 of n): <where> -> <exact action> -> unblocks <what>`.
 - Always the owner's click: moving money, signing, registering a company or bank account, identity documents, new third-party accounts, statements in the owner's own name. Never ask for a password or code in chat.
 - Every ask is a cost: log it with `learn/scripts/owner-log.sh`, and turn a recurring ask into a standing rule the owner approves once.
 

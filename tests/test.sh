@@ -61,7 +61,12 @@ check "continue-ledger: another session is never pushed" "[ \"\$(cl '{\"session_
 L="$T/learnings"
 check "note.sh takes a single line too (the rules ask for one note.sh line)" "LEARNINGS_DIR='$L' bash '$HERE/skills/learn/scripts/note.sh' 'zsh did not split an unquoted variable' | grep -q noted && grep -q '| tool | zsh did not split an unquoted variable | zsh did not split' '$L/inbox.md'"
 check "note.sh counts a repeated root cause" "LEARNINGS_DIR='$L' bash '$HERE/skills/learn/scripts/note.sh' p qa 'x' 'init script misses the dev command' 'fix' >/dev/null && LEARNINGS_DIR='$L' bash '$HERE/skills/learn/scripts/note.sh' p2 qa 'y' 'init script misses the dev command' 'fix' | grep -q 'seen 2 times'"
-check "owner-log.sh counts asks by class" "LEARNINGS_DIR='$L' bash '$HERE/skills/learn/scripts/owner-log.sh' p sign-in 'sign in' 'save it once' | grep -q '1 of class'"
+check "owner-log.sh counts asks by class" "LEARNINGS_DIR='$L' bash '$HERE/skills/learn/scripts/owner-log.sh' p sign-in 'sign in' 'save it once' 'tab open at the sign-in page' | grep -q '1 of class'"
+OL() { LEARNINGS_DIR="$L" bash "$HERE/skills/learn/scripts/owner-log.sh" "$@" 2>&1; }
+check "owner-log.sh refuses an unstaged ask and names its sites (2026-10-31: six sign-ups asked, no tab opened)" "OL p new-account 'Sign up with Google at alternativeto.net, saashub.com, betalist.com' 'unavoidable' | grep -q 'not logged: stage.*alternativeto.net betalist.com saashub.com' && ! grep -q 'alternativeto' '$L/owner-actions.log'"
+check "owner-log.sh logs a staged ask with what was staged" "OL p new-account 'Sign up at alternativeto.net/signup' 'unavoidable' 'tab open; no Google button, email form' | grep -q '1 of class' && grep -q 'alternativeto.net/signup | unavoidable | tab open; no Google button' '$L/owner-actions.log'"
+check "owner-log.sh refuses 'none' as staging, even with no site named" "OL p physical 'Free 10 GB in Storage' 'x' none | grep -q 'Open the page, app or dialog'"
+check "owner-log.sh lets a decision through unstaged; file names and emails are not sites" "OL p decision 'MIT for app.json and README.md, mail me@example.com?' 'x' | grep -q 'of class' && OL p other 'edit app.json, mail me@example.com' 'x' | grep -q 'Open the page, app or dialog'"
 check "run-log.sh logs a run" "LEARNINGS_DIR='$L' bash '$HERE/skills/learn/scripts/run-log.sh' p claude 5 7 1 1 0 30 | grep -q 'logged run 1'"
 check "review.sh groups by root cause" "LEARNINGS_DIR='$L' bash '$HERE/skills/learn/scripts/review.sh' 2>/dev/null | grep -q ' 2  init script misses the dev command'"
 

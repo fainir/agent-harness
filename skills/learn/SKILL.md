@@ -12,7 +12,7 @@ Two levels, like Harness²: each project improves its own harness on every run (
 - Whenever a step fails, is retried, is worked around, needs a step the skill did not name, or asks the owner for something the agent could have done itself: note it at once, one line, with evidence (a file, a log line, a transcript moment):
   `bash ~/.agents/skills/learn/scripts/note.sh <project> <phase> "<what happened>" "<root cause>" "<proposed change>" ["<evidence>"]`
   Phases: spec, build, ux, qa, gates, deploy, report, company, portfolio, hire, tool. The script says how often that root cause was seen.
-- Every NEEDS YOU: `bash ~/.agents/skills/learn/scripts/owner-log.sh <project> <class> "<what>" "<how to never ask this again>"`.
+- Every NEEDS YOU, once it is staged: `bash ~/.agents/skills/learn/scripts/owner-log.sh <project> <class> "<what>" "<how to never ask this again>" "<what you staged>"`.
 - End of run: `bash ~/.agents/skills/learn/scripts/run-log.sh <project> <claude|codex> <verified> <total> <defects> <owner-actions> <reruns> <minutes> ["<note>"]`, and the report's last line is `Learned: <one line, or none>`.
 - Learnings are about the harness, not the product. Product defects are READINESS rows. Facts about one project (its run, test, deploy and QA commands, its quirks, a step that had to be improvised there) go straight into that project's harness: `bash ~/.agents/skills/learn/scripts/project-note.sh "<one line>"` from the project folder; a repeated multi-step procedure becomes a script in the project's `scripts/`.
 
