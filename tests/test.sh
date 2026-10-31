@@ -69,6 +69,12 @@ check "owner-log.sh refuses 'none' as staging, even with no site named" "OL p ph
 check "owner-log.sh lets a decision through unstaged; file names and emails are not sites" "OL p decision 'MIT for app.json and README.md, mail me@example.com?' 'x' | grep -q 'of class' && OL p other 'edit app.json, mail me@example.com' 'x' | grep -q 'Open the page, app or dialog'"
 check "run-log.sh logs a run" "LEARNINGS_DIR='$L' bash '$HERE/skills/learn/scripts/run-log.sh' p claude 5 7 1 1 0 30 | grep -q 'logged run 1'"
 check "review.sh groups by root cause" "LEARNINGS_DIR='$L' bash '$HERE/skills/learn/scripts/review.sh' 2>/dev/null | grep -q ' 2  init script misses the dev command'"
+LS="$T/l-similar"; NS() { LEARNINGS_DIR="$LS" bash "$HERE/skills/learn/scripts/note.sh" "$@" >/dev/null; }
+NS invoicer qa 'turn ended with the reviewer running' 'ship does not say to wait for subagents inside the turn' 'wait'
+NS dashob ux 'reviewer still running at turn end' 'the ux-ui-review step spawns a background reviewer and the skill does not say to wait for it inside the turn' 'wait'
+NS other tool 'zsh glob' 'an unmatched glob aborts the whole zsh command' 'quote'
+SIM() { LEARNINGS_DIR="$LS" bash "$HERE/skills/learn/scripts/review.sh" 2>/dev/null | sed -n '/== similar causes/,/== last 10 runs/p'; }
+check "review.sh lists differently worded causes together (2026-10-31: every cause showed count 1)" "SIM | grep -q '2 rows, 2 projects (dashob, invoicer)' && ! SIM | grep -q 'unmatched glob'"
 
 # 6b. probe.sh with a fake runner: blind labels, candidate in one run only, offline copies, source untouched
 P="$T/probe"; mkdir -p "$P/bin" "$P/task"
