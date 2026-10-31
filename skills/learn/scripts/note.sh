@@ -13,7 +13,8 @@ DIR="${LEARNINGS_DIR:-$HOME/.agents/learnings}"; mkdir -p "$DIR"; f="$DIR/inbox.
 clean() { printf '%s' "$1" | tr '\n|' '  ' | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//'; }
 cause="$(clean "$4")"
 printf '| %s | %s | %s | %s | %s | %s | %s | open |\n' "$(date +%F)" "$(clean "$1")" "$(clean "$2")" "$(clean "$3")" "$cause" "$(clean "$5")" "$(clean "${6:-}")" >> "$f"
-# Same root cause seen before? Key = its first three words, case-insensitive. 2 or more rows: promote it in the next review.
-key="$(printf '%s' "$cause" | tr '[:upper:]' '[:lower:]' | awk '{print $1, $2, $3}' | sed -E 's/ +$//')"
-n=$(grep -icF -- "$key" "$f" || true)
-if [ "${n:-0}" -ge 2 ]; then echo "noted: '$key' seen $n times; promote it in the next learn review"; else echo "noted: first time for '$key'"; fi
+# Same root cause seen before? Counted by meaning (similar.py: 3 shared words and 40 percent), so a cause reworded by
+# another session still counts and two causes that only open alike do not. 2 or more open rows: promote it in the review.
+read -r n projects <<<"$(python3 -I "$(dirname "$0")/similar.py" count "$f" "$cause" 2>/dev/null || echo 1)"
+short="$(printf '%s' "$cause" | cut -c1-60)"
+if [ "${n:-1}" -ge 2 ]; then echo "noted: '$short' seen $n times (${projects}); promote it in the next learn review"; else echo "noted: first time for '$short'"; fi

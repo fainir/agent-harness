@@ -61,6 +61,11 @@ check "continue-ledger: another session is never pushed" "[ \"\$(cl '{\"session_
 L="$T/learnings"
 check "note.sh takes a single line too (the rules ask for one note.sh line)" "LEARNINGS_DIR='$L' bash '$HERE/skills/learn/scripts/note.sh' 'zsh did not split an unquoted variable' | grep -q noted && grep -q '| tool | zsh did not split an unquoted variable | zsh did not split' '$L/inbox.md'"
 check "note.sh counts a repeated root cause" "LEARNINGS_DIR='$L' bash '$HERE/skills/learn/scripts/note.sh' p qa 'x' 'init script misses the dev command' 'fix' >/dev/null && LEARNINGS_DIR='$L' bash '$HERE/skills/learn/scripts/note.sh' p2 qa 'y' 'init script misses the dev command' 'fix' | grep -q 'seen 2 times'"
+NW="$T/l-noteword"; NWN() { LEARNINGS_DIR="$NW" bash "$HERE/skills/learn/scripts/note.sh" "$@"; }
+NWN p1 tool 'x' 'the browser tools block reddit by safety policy and curl gets a challenge' 'fix' >/dev/null
+check "note.sh does not count a cause that only opens alike (2026-10-31: 'the browser tools' counted twice)" "NWN p2 tool 'y' 'the browser tools only take data inline, nothing hands a page a big file' 'fix' | grep -q 'first time'"
+NWN p3 qa 'z' 'the ship step spawns a background reviewer and the skill does not say to wait for it' 'fix' >/dev/null
+check "note.sh counts a cause another session worded differently" "NWN p4 ux 'w' 'the skill does not say to wait for the background reviewer the step spawns' 'fix' | grep -q 'seen 2 times (p3,p4)'"
 check "owner-log.sh counts asks by class" "LEARNINGS_DIR='$L' bash '$HERE/skills/learn/scripts/owner-log.sh' p sign-in 'sign in' 'save it once' 'tab open at the sign-in page' | grep -q '1 of class'"
 OL() { LEARNINGS_DIR="$L" bash "$HERE/skills/learn/scripts/owner-log.sh" "$@" 2>&1; }
 check "owner-log.sh refuses an unstaged ask and names its sites (2026-10-31: six sign-ups asked, no tab opened)" "OL p new-account 'Sign up with Google at alternativeto.net, saashub.com, betalist.com' 'unavoidable' | grep -q 'not logged: stage.*alternativeto.net betalist.com saashub.com' && ! grep -q 'alternativeto' '$L/owner-actions.log'"

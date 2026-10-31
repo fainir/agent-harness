@@ -12,35 +12,15 @@ awk -F'|' -v s="$since" '
     n[k]++; if (index(p[k], $3) == 0) p[k]=p[k] $3; e[k]=c }
   END { for (k in n) printf "%2d  %s  ->%s\n", n[k], e[k], p[k] }' "$DIR/inbox.md" 2>/dev/null | sort -rn | head -20
 echo; echo "== similar causes: open rows whose causes share most of their words (one cause worded differently; cluster by meaning from here) =="
-python3 -I - "$DIR/inbox.md" "$since" <<'PYSIM'
-import re, sys
-STOP = set("the a an and or of to in on for with by from at as is are was were be been it its this that these those not no does did do when then than into only every each any all one two our their they them his her you your which what while after before same also".split())
-def words(t):
-    out = set()
-    for w in re.findall(r"[a-z][a-z'-]+", t.lower()):
-        w = w.strip("'-")
-        if len(w) < 4 or w in STOP:
-            continue
-        for suf in ("ing", "ed", "es", "s"):
-            if w.endswith(suf) and len(w) - len(suf) >= 4:
-                w = w[: -len(suf)]
-                break
-        out.add(w)
-    return out
-rows = []
-try:
-    lines = open(sys.argv[1], encoding="utf-8").read().splitlines()
-except OSError:
-    lines = []
-for line in lines:
-    c = [x.strip() for x in line.split("|")]
-    if len(c) < 10 or not re.match(r"20\d\d-\d\d-\d\d$", c[1]) or "open" not in c[8] or c[1] < sys.argv[2]:
-        continue
-    rows.append((c[2], c[5], words(c[5])))
+python3 -I - "$DIR/inbox.md" "$since" "$(dirname "$0")" <<'PYSIM'
+import sys
+sys.path.insert(0, sys.argv[3])
+from similar import open_rows, similar
+rows = open_rows(sys.argv[1], sys.argv[2])
 groups = []  # complete linkage: a row joins a group only when it shares enough words with every row already in it
 for r in rows:
     for g in groups:
-        if all(len(r[2] & x[2]) >= 3 and len(r[2] & x[2]) / max(1, min(len(r[2]), len(x[2]))) >= 0.4 for x in g):
+        if all(similar(r[2], x[2]) for x in g):
             g.append(r); break
     else:
         groups.append([r])
