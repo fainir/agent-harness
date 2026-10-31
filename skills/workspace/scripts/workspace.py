@@ -436,6 +436,8 @@ def hub(url):
 
 def page_parts(path):
     """A built or published page: its template, with the data swapped for a marker, and the embedded data."""
+    if not os.path.isfile(path):
+        sys.exit('%s: no such file' % path)
     t = read(path)
     m = re.search(r'<script[^>]*type="application/json"[^>]*>(.*?)</script>', t, re.S)
     if not m:
