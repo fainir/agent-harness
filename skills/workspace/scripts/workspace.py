@@ -11,6 +11,8 @@ Usage: python3 -I workspace.py <project-dir> [...]       build each project's pa
        python3 -I workspace.py --url <project-dir> <url>  record where that page is published
        python3 -I workspace.py --hub [--url <url>]        build the all-projects page (--url records where it is published)
        python3 -I workspace.py --stale                    registered projects whose files changed since their last build
+       python3 -I workspace.py --diff <published> <new>   what a republish changes, to read before publishing (save the published
+                                                          page with the Artifact tool's read, path index.html; <new> is .workspace/artifact.html)
 No dependencies.
 """
 import collections, datetime, json, os, re, subprocess, sys
@@ -432,8 +434,54 @@ def hub(url):
     print('%d projects, %d published -> %s' % (len(projects), sum(1 for e in projects if e.get('url')), os.path.join(out, 'artifact.html')))
 
 
+def page_parts(path):
+    """A built or published page: its template, with the data swapped for a marker, and the embedded data."""
+    t = read(path)
+    m = re.search(r'<script[^>]*type="application/json"[^>]*>(.*?)</script>', t, re.S)
+    if not m:
+        sys.exit('%s: no workspace data in this page' % path)
+    return t[:m.start(1)] + '@@DATA@@' + t[m.end(1):], json.loads(m.group(1).replace('<\\/', '</'))
+
+
+def diff(published, new):
+    """Everything a republish changes, so the page is read before it goes out without reading all of it again."""
+    import difflib
+    (ot, od), (nt, nd) = page_parts(published), page_parts(new)
+    out = []
+    tpl = [l for l in difflib.unified_diff(ot.split('\n'), nt.split('\n'), lineterm='', n=0) if l.startswith('+') and not l.startswith('+++')]
+    if tpl:  # lines only the published copy has are the publish wrapper, so only added lines count
+        out += ['template: %d new or changed lines' % len(tpl)] + ['  ' + l for l in tpl]
+    for k, n in nd.items():
+        o = od.get(k)
+        if k == 'project':
+            out += ['project: %s = %s' % (f, json.dumps(n[f], ensure_ascii=False)) for f in n if f != 'generated' and n.get(f) != (o or {}).get(f)]
+        elif k == 'docs':
+            old = {d['path']: d.get('md', '') for d in o or []}
+            for d in n:
+                if old.get(d['path']) == d.get('md', ''):
+                    continue
+                lines = [l for l in difflib.unified_diff(old.get(d['path'], '').split('\n'), d.get('md', '').split('\n'), lineterm='', n=0)
+                         if l[:1] in '+-' and l[:3] not in ('+++', '---')]
+                out += ['doc %s: %s' % (d['path'], 'new' if d['path'] not in old else '%d changed lines' % len(lines))] + ['  ' + l for l in lines]
+        elif k == 'files':
+            old = {f['path'] for f in o or []}
+            fresh = [f['path'] for f in n if f['path'] not in old]
+            if fresh:
+                out.append('files: new ' + ', '.join(fresh))
+        elif isinstance(n, list):
+            seen = {json.dumps(x, sort_keys=True) for x in o or []}
+            fresh = [x for x in n if json.dumps(x, sort_keys=True) not in seen]
+            if fresh:
+                out += ['%s: %d new or changed' % (k, len(fresh))] + ['  ' + json.dumps(x, ensure_ascii=False) for x in fresh]
+        elif n != o:
+            out.append('%s: %s' % (k, json.dumps(n, ensure_ascii=False)))
+    print('\n'.join(out) if out else 'no changes since the published page')
+
+
 def main():
     a = sys.argv[1:]
+    if a[:1] == ['--diff'] and len(a) == 3:
+        return diff(a[1], a[2])
     if a[:1] == ['--hub']:
         return hub(a[2] if a[1:2] == ['--url'] and len(a) > 2 else '')
     if a == ['--stale']:

@@ -171,6 +171,9 @@ check "workspace: .env values and key-shaped strings never reach the page" "! gr
 wsgen --url "$WS" https://claude.ai/artifact/test123 && wsgen --hub >/dev/null 2>&1
 check "workspace: the hub lists every built project and its published page" "grep -q 'Acme' '$T/wsreg/hub/artifact.html' && grep -q 'Gizmo' '$T/wsreg/hub/artifact.html' && grep -q 'claude.ai/artifact/test123' '$T/wsreg/hub/artifact.html'"
 check "workspace: --stale lists a project only after its files change" "[ -z \"\$(wsgen --stale)\" ] && touch -t 203001010000 '$WS/COMPANY.md' && [ \"\$(wsgen --stale)\" = '$WS' ]"
+{ printf '<!doctype html><html><head><style>p{}</style></head><body>\n'; cat "$WS/.workspace/artifact.html"; printf '\n</body></html>\n'; } > "$T/ws-pub.html"  # as the Artifact read returns a published page
+perl -pi -e 's/\| todo \|/| building (me) |/' "$WS/COMPANY.md" && wsgen "$WS" >/dev/null 2>&1
+check "workspace: --diff prints only what a republish changes, not the publish wrapper" "out=\$(wsgen --diff '$T/ws-pub.html' '$WS/.workspace/artifact.html'); echo \"\$out\" | grep -q '^rows: 1 new or changed' && ! echo \"\$out\" | grep -q '^template' && [ \"\$(wsgen --diff '$WS/.workspace/artifact.html' '$WS/.workspace/artifact.html')\" = 'no changes since the published page' ]"
 
 # 7. install, reinstall, uninstall in a throwaway HOME
 H="$T/home"; mkdir -p "$H/.claude" "$H/.codex"; printf '# my own rules\n' > "$H/.claude/CLAUDE.md"
