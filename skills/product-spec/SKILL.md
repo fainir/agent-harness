@@ -23,6 +23,7 @@ Output: `PRODUCT.md` (under 150 lines) and the `## Flows` table of `READINESS.md
 
 ## Rules
 
+- Before writing flows, study how the best two or three products in this category do the core job (their screens, copy and pricing) and record in Decisions what you copy, improve or skip, with links.
 - Existing project: derive flows from the code (routes, screens, commands, webhooks, emails, settings), README and old plans. Do not invent features the code does not have; do add missing unhappy paths.
 - A flow is worth a row only if a user would notice it missing or broken.
 - Before the first build row, a pre-mortem: three "this failed because" lines, each becoming a flow, a release gate or a non-goal.

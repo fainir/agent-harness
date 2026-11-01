@@ -44,6 +44,7 @@ Phases 2 to 4 repeat per flow: build it, review it, QA it, next. Never build eve
 
 ## Phase 2: build
 
+- Best way first, per flow: how the best products build this kind of flow (the framework's official guide, the platform's documented pattern, a security or accessibility standard where one applies), two lines in the row before the code; then the smallest correct change that way.
 - Smallest correct change per flow; match the code style; built-ins over dependencies; tests for logic, not for the framework.
 - Secrets only in `.env.local` / the platform's variables, documented in `.env.example`. Never commit, log or print them.
 - Commit and push after each flow is verified. Message says what the user can now do.

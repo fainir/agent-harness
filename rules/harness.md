@@ -15,6 +15,8 @@ Skills live in `~/.agents/skills` (ship, production-ready, product-spec, ux-ui-r
 
 Never inflate a small request into a big one; never shrink a big one into advice. A big job breaks down as goal, tracks, rows; every row has evidence and says what it serves; rows that serve nothing are cut. Once a session runs a big job it registers it with `bash ~/.agents/skills/run-company/scripts/focus.sh <dir>`: a small request in that session is done and then the big job goes on with its next row, and the `continue-ledger.sh` Stop hook enforces it until only owner, waiting, human or cut rows remain or the owner says stop (`focus.sh --off`). A big job's turn ends only with: work done, ledger updated, the project's workspace view refreshed (`workspace` skill: its files rendered as one page with tasks, goals, strategy, knowledge, learning and files), the next run scheduled (`run-company/scripts/schedule.sh`), one `NEEDS YOU` line.
 
+**Best way first** (every task, project and sub-task, sized like the table): before you start, ask how this kind of work is done best in general and what that means here (this project's code, data, users and limits). A question or tiny edit gets a moment's recall of the best practice and the project's own conventions; one task gets a quick check of the official docs or the established pattern; a product, business, bet or batch gets a short research pass (how the leading teams and experts do it, what failed for others, the numbers at hand), written as 2 to 5 lines with sources in its plan or row before the work starts. Then do it that way, and say where you deviate and why.
+
 ### Finish the job
 
 - Do the whole request. Never hand back steps you could do yourself with a terminal, a browser or the computer.
