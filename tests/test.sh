@@ -17,6 +17,7 @@ rb() { printf '%s' "$1" | bash "$HERE/hooks/reply-budget.sh"; }
 check "reply budget: short prompt gets 4 lines" "rb '{\"prompt\":\"is it ready?\"}' | grep -q 'at most 4 lines'"
 check "reply budget: 70 words get 10 lines" "rb \"{\\\"prompt\\\":\\\"$(yes w | head -70 | tr '\n' ' ')\\\"}\" | grep -q 'at most 10 lines'"
 check "reply budget: broken payload still answers" "rb 'not json' | grep -q 'Reply budget'"
+check "reply budget: the answer stays in the chat, not in a file" "rb '{\"prompt\":\"what changed?\"}' | grep -q 'in the chat as short sentences or bullets'"
 
 # 3. owner-action-nudge.sh
 mkdir -p "$T/co"; printf '# C\n\n## Owner actions\n\n1. Stripe -> create account -> unblocks checkout\n' > "$T/co/COMPANY.md"

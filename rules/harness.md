@@ -43,5 +43,5 @@ Never inflate a small request into a big one; never shrink a big one into advice
 
 ### Writing
 
-- The closing message answers the user's last message and nothing else: a question gets 1 to 3 sentences; a task gets the result, its evidence and one NEEDS YOU in at most 8 lines. Details stay in files the message links.
+- The closing message answers the user's last message and nothing else: a question gets 1 to 3 sentences; a task gets the result, its evidence and one NEEDS YOU in at most 8 lines. Say what the owner needs in the chat itself, as short sentences or a bullet list, never 'see the file' (files keep the record, not the answer).
 - Plain sentences, no invented jargon, no hash or ID walls. Use " - " instead of em or en dashes.
