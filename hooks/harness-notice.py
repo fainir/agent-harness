@@ -1,8 +1,8 @@
 """Tell a running Claude Code or Codex session which harness files changed after it started.
 
 A session reads its global rules (~/.claude/CLAUDE.md or ~/.codex/AGENTS.md) once, at start, and keeps any skill it
-already read in its context. Scripts and hook scripts always run from disk, so they need no notice; the rules and the
-skill documents do. Called from hooks that both tools already run (UserPromptSubmit reply-budget.sh, Claude Code's
+already read in its context. Scripts and hook scripts always run from disk, so they need no notice; the rules, the rules
+library, the skill documents and the session's own project files (its AGENTS.md, CLAUDE.md and project skills) do. Called from hooks that both tools already run (UserPromptSubmit reply-budget.sh, Claude Code's
 PostToolUse counter), so a change reaches every running session without a restart or a new hook registration.
 Reads the hook payload on stdin; prints one line, or with --json EVENT the hookSpecificOutput JSON; once per change.
 Never blocks: any failure prints nothing.
@@ -15,6 +15,14 @@ RULES = {'claude': os.environ.get('HARNESS_RULES_CLAUDE') or os.environ.get('HAR
          'codex': os.environ.get('HARNESS_RULES_CODEX', os.path.join(HOME, '.codex', 'AGENTS.md'))}
 
 
+def project_root(cwd):
+    """The nearest folder at or above cwd with AGENTS.md, CLAUDE.md or .git, below HOME; None outside a project."""
+    d = os.path.abspath(cwd or '')
+    while d and d not in (HOME, os.path.dirname(d)):
+        if any(os.path.exists(os.path.join(d, n)) for n in ('AGENTS.md', 'CLAUDE.md', '.git')):
+            return d
+        d = os.path.dirname(d)
+    return None
 def ancestors():
     """(command, start epoch) of this hook's parent processes, nearest first."""
     pid, out = os.getppid(), []
@@ -59,6 +67,18 @@ def main():
     rules = RULES[tool]
     if os.path.isfile(rules) and os.path.getmtime(rules) > since:
         changed.append((os.path.getmtime(rules), 'the global rules ' + rules.replace(HOME, '~', 1)))
+    lib = os.environ.get('HARNESS_RULES_LIB', os.path.join(HOME, '.claude', 'rules-library'))
+    for doc in sorted(glob.glob(os.path.join(lib, '*.md'))):
+        if os.path.getmtime(doc) > since:
+            changed.append((os.path.getmtime(doc), 'the rule file ' + doc.replace(HOME, '~', 1)))
+    root = project_root(payload.get('cwd') or os.getcwd())  # per-project harness: a change there reaches the chats working in it
+    if root:
+        docs = [os.path.join(root, n) for n in ('AGENTS.md', 'CLAUDE.md')]
+        for sub in ('.claude', '.agents'):
+            docs += glob.glob(os.path.join(root, sub, 'skills', '*', '*.md'))
+        for doc in docs:
+            if os.path.isfile(doc) and os.path.getmtime(doc) > since:
+                changed.append((os.path.getmtime(doc), 'the project file ' + doc.replace(HOME, '~', 1)))
     skills = {}
     for doc in glob.glob(os.path.join(SKILLS, '*', '*.md')):
         m = os.path.getmtime(doc)

@@ -38,6 +38,9 @@ else ok "harness notice: skipped (no file birth time on this filesystem)"; fi
 printf '# codex rules\n' > "$T/CODEX.md"
 check "harness notice: a running Codex chat hears it through the prompt hook" "printf '{\"prompt\":\"go on\",\"session_id\":\"cx1\"}' | HARNESS_TOOL=codex HARNESS_SESSION_START=1000 hn bash '$HERE/hooks/reply-budget.sh' > '$T/hn2'; grep -q 'Reply budget' '$T/hn2' && grep -q 'CODEX.md' '$T/hn2' && ! grep -q 'RULES.md' '$T/hn2'"
 
+mkdir -p "$T/proj/sub" "$T/lib"; printf '# project rules\n' > "$T/proj/AGENTS.md"; printf '# a library rule\n' > "$T/lib/browser.md"
+check "harness notice: a chat in a project hears that its project rules and a library rule changed" "printf '{\"prompt\":\"go on\",\"session_id\":\"cx2\",\"cwd\":\"$T/proj/sub\"}' | HARNESS_TOOL=codex HARNESS_SESSION_START=1000 HARNESS_RULES_LIB='$T/lib' hn bash '$HERE/hooks/reply-budget.sh' > '$T/hn3'; grep -q 'the project file .*proj/AGENTS.md' '$T/hn3' && grep -q 'the rule file .*lib/browser.md' '$T/hn3'"
+
 # 5. done-check.py local passes (no judge call)
 dc() { (cd "$T" && printf '%s' "$1" | DONE_CHECK_TEST=1 python3 -I "$HERE/hooks/done-check.py" --judge codex); }
 check "done check: continued turn passes" "[ \"\$(dc '{\"stop_hook_active\":true}')\" = '{}' ]"
@@ -197,6 +200,7 @@ check "install: one rules block after two installs" "[ \"\$(grep -c 'agent-harne
 check "install: hooks added once, user hooks kept" "python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1]))[\"hooks\"]; s=json.dumps(d); sys.exit(0 if s.count(\"done-check.py\")==1 and s.count(\"continue-ledger.sh\")==1 and \"my-own-hook.sh\" in s and \"UserPromptSubmit\" in d else 1)' '$H/.claude/settings.json'"
 check "install: zsh-guard runs before Bash calls only (matcher Bash), and not for Codex" "python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1]))[\"hooks\"][\"PreToolUse\"]; g=[x for x in d if any(\"zsh-guard.sh\" in c[\"command\"] for c in x[\"hooks\"])]; sys.exit(0 if len(g)==1 and g[0].get(\"matcher\")==\"Bash\" else 1)' '$H/.claude/settings.json' && ! grep -q zsh-guard '$H/.codex/hooks.json'"
 check "install: codex hooks.json written" "grep -q -- '--judge codex' '$H/.codex/hooks.json'"
+check "install: a no-progress Stop loop ends after 2 blocks (Claude settings env)" "python3 -I -c 'import json,sys; sys.exit(0 if json.load(open(sys.argv[1])).get(\"env\", {}).get(\"CLAUDE_CODE_STOP_HOOK_BLOCK_CAP\") == \"2\" else 1)' '$H/.claude/settings.json'"
 inst --uninstall
 check "uninstall: links, block and our hooks removed, user content kept" "[ ! -e '$H/.agents/skills/ship' ] && ! grep -q 'agent-harness:start' '$H/.claude/CLAUDE.md' && grep -q 'my own rules' '$H/.claude/CLAUDE.md' && ! grep -q 'done-check' '$H/.claude/settings.json' && grep -q 'my-own-hook.sh' '$H/.claude/settings.json'"
 

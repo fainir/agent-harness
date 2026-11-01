@@ -53,6 +53,14 @@ if mode == "add":
         h.setdefault(event, []).append({"matcher": "Bash", "hooks": entry} if event == "PreToolUse" else {"hooks": entry})
 if not h:
     data.pop("hooks", None)
+if tool == "claude":  # end a Stop-hook loop that makes no progress (a /goal blocked on the owner) after 2 blocks, not 8
+    env = data.setdefault("env", {})
+    if mode == "add":
+        env.setdefault("CLAUDE_CODE_STOP_HOOK_BLOCK_CAP", "2")
+    elif env.get("CLAUDE_CODE_STOP_HOOK_BLOCK_CAP") == "2":
+        del env["CLAUDE_CODE_STOP_HOOK_BLOCK_CAP"]
+    if not env:
+        data.pop("env", None)
 os.makedirs(os.path.dirname(path), exist_ok=True)
 with open(path, "w") as fh:
     json.dump(data, fh, indent=2)
