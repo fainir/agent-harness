@@ -23,6 +23,16 @@ def project_root(cwd):
             return d
         d = os.path.dirname(d)
     return None
+def birth_time(path):
+    """When a file was created: st_birthtime on macOS and BSD; Linux Python has no such field, so ask stat(1), which
+    reads it through statx (0 when the filesystem does not record it)."""
+    t = getattr(os.stat(path), 'st_birthtime', 0)
+    if not t:
+        try:
+            t = float(subprocess.run(['stat', '-c', '%W', path], capture_output=True, text=True, timeout=5).stdout.strip() or 0)
+        except (OSError, ValueError, subprocess.SubprocessError):
+            t = 0
+    return t if t > 0 else 0
 def ancestors():
     """(command, start epoch) of this hook's parent processes, nearest first."""
     pid, out = os.getppid(), []
@@ -50,7 +60,7 @@ def main():
     tp = payload.get('transcript_path') or ''
     start = float(os.environ.get('HARNESS_SESSION_START') or 0)
     if not start and tp and os.path.isfile(tp):
-        start = getattr(os.stat(tp), 'st_birthtime', 0)  # the transcript is born with the session
+        start = birth_time(tp)  # the transcript is born with the session
     procs = [] if start else ancestors()
     start = start or next((t for c, t in procs if re.search(r'\b(codex|claude)\b', c)), 0)
     if not start:
