@@ -2,13 +2,13 @@
 # PreToolUse hook for the Bash tool: when the shell is zsh (the macOS default), block the zsh traps agents keep
 # falling into, with the fix, before the command runs. A rule line alone did not stop them (learnings inbox,
 # 6 slips on 2026-10-30). Quoted strings and heredoc bodies are ignored, so scripts and messages never trip it.
+# It also blocks `codex exec` with stdin left open, under any shell: codex reads stdin even with a prompt argument,
+# and a Bash-tool or background shell never closes it, so the run waits forever (2026-11-01: 40 minutes; 2026-11-05).
 # Exit 2 with the reason on stderr blocks the call; anything else lets it run. ZSH_GUARD_FORCE=1 checks under any shell.
 # The check is Python, read from fd 3 so stdin stays the hook payload.
 exec python3 -I /dev/fd/3 3<<'PY'
 import json, os, re, sys
 
-if not os.environ.get("SHELL", "").endswith("zsh") and os.environ.get("ZSH_GUARD_FORCE") != "1":
-    sys.exit(0)
 try:
     data = json.load(sys.stdin)
 except Exception:
@@ -31,6 +31,16 @@ for line in cmd.split("\n"):
 bare = "\n".join(out)
 bare = re.sub(r"'[^']*'", "''", bare)
 bare = re.sub(r'"(?:[^"\\]|\\.)*"', '""', bare)
+
+# Any shell: `codex exec` needs stdin closed (< /dev/null), fed (a pipe or heredoc), or it hangs at
+# "Reading additional input from stdin". --help never reads it.
+if re.search(r"\bcodex\s+exec\b", bare) and not re.search(r"<\s*/dev/null|<<|\|\s*codex\s+exec\b|\s--help\b|\s-h\b", bare):
+    sys.stderr.write("zsh-guard: codex exec reads stdin even with a prompt argument, and the Bash tool (above all in the background) "
+                     "never closes it, so it waits forever at 'Reading additional input from stdin'. Add < /dev/null to the codex exec "
+                     "command (or feed it with a pipe or heredoc) and run it again.\n")
+    sys.exit(2)
+if not os.environ.get("SHELL", "").endswith("zsh") and os.environ.get("ZSH_GUARD_FORCE") != "1":
+    sys.exit(0)
 
 START = r"(?:^|[;&|(\n]|\bdo\b|\bthen\b|\belse\b)\s*"
 TRAPS = [

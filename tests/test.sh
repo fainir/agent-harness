@@ -125,6 +125,11 @@ check "zsh-guard: allows quoted URLs, messages and heredoc bodies" "[ \"\$(zg \"
 for path in ps: pass
 E\")\" = 0 ]"
 check "zsh-guard: does nothing under bash" "python3 -c 'import json; print(json.dumps({\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"for path in a; do :; done\"}}))' | SHELL=/bin/bash bash '$HERE/hooks/zsh-guard.sh'"
+zgb() { python3 -c 'import json,sys; print(json.dumps({"tool_name":"Bash","tool_input":{"command":sys.argv[1]}}))' "$1" | SHELL=/bin/bash bash "$HERE/hooks/zsh-guard.sh" >/dev/null 2>&1; echo $?; }
+check "zsh-guard: blocks codex exec with stdin left open, under zsh and bash" "[ \"\$(zg 'codex exec -C /tmp/p -s read-only \"review it\" > log 2>&1')\" = 2 ] && [ \"\$(zgb 'codex exec \"do x\"')\" = 2 ]"
+check "zsh-guard: allows codex exec with < /dev/null, a pipe, a heredoc or --help, and the words in a quoted message" "[ \"\$(zg 'codex exec -C /tmp/p \"do x\" < /dev/null > log 2>&1')\" = 0 ] && [ \"\$(zg 'echo hi | codex exec -')\" = 0 ] && [ \"\$(zg 'codex exec --help')\" = 0 ] && [ \"\$(zg \"codex exec - <<'P'
+review it
+P\")\" = 0 ] && [ \"\$(zg 'git commit -m \"codex exec hung\"')\" = 0 ] && [ \"\$(zgb '( codex exec \"x\" ) > l 2>&1 < /dev/null &')\" = 0 ]"
 
 # 6b2. run.sh idle gate: no model run when nothing is buildable and nothing changed
 IG="$T/ig"; mkdir -p "$IG/co" "$IG/bin"; printf '#!/bin/sh\necho run >> "%s/calls"\n' "$IG" > "$IG/bin/claude"; chmod +x "$IG/bin/claude"
