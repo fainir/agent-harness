@@ -41,12 +41,29 @@ check "harness notice: a running Codex chat hears it through the prompt hook" "p
 mkdir -p "$T/proj/sub" "$T/lib"; printf '# project rules\n' > "$T/proj/AGENTS.md"; printf '# a library rule\n' > "$T/lib/browser.md"
 check "harness notice: a chat in a project hears that its project rules and a library rule changed" "printf '{\"prompt\":\"go on\",\"session_id\":\"cx2\",\"cwd\":\"$T/proj/sub\"}' | HARNESS_TOOL=codex HARNESS_SESSION_START=1000 HARNESS_RULES_LIB='$T/lib' hn bash '$HERE/hooks/reply-budget.sh' > '$T/hn3'; grep -q 'the project file .*proj/AGENTS.md' '$T/hn3' && grep -q 'the rule file .*lib/browser.md' '$T/hn3'"
 
-# 5. done-check.py local passes (no judge call)
-dc() { (cd "$T" && printf '%s' "$1" | DONE_CHECK_TEST=1 python3 -I "$HERE/hooks/done-check.py" --judge codex); }
+# 5. done-check.py with a local judge that always asks for a continuation
+mkdir -p "$T/done-bin"
+cat > "$T/done-bin/codex" <<'STUB'
+#!/bin/sh
+printf '%s\n' 'CONTINUE: Run the tests and report the results.'
+STUB
+chmod +x "$T/done-bin/codex"
+dc() { (cd "$T" && printf '%s' "$1" | env -u DONE_CHECK PATH="$T/done-bin:$PATH" python3 -I "$HERE/hooks/done-check.py" --judge codex); }
 check "done check: continued turn passes" "[ \"\$(dc '{\"stop_hook_active\":true}')\" = '{}' ]"
 check "done check: NEEDS YOU passes" "[ \"\$(dc '{\"last_assistant_message\":\"Built. NEEDS YOU (1 of 1): Stripe -> sign up -> unblocks checkout\",\"cwd\":\"'$T'\"}')\" = '{}' ]"
 check "done check: short answer, nothing changed, passes" "[ \"\$(dc '{\"last_assistant_message\":\"Yes, it is ready.\",\"cwd\":\"'$T'\"}')\" = '{}' ]"
 check "done check: recursion guard" "[ \"\$(printf '{}' | DONE_CHECK=1 python3 -I '$HERE/hooks/done-check.py')\" = '{}' ]"
+
+git init -q "$T/done-repo" || exit 1
+printf '%s\n' '{"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Check whether the test suite passes."}]}}' > "$T/done-turn.jsonl"
+dc_reply() {
+  dc "$(python3 -I -c 'import json,sys; print(json.dumps({"cwd":sys.argv[1],"transcript_path":sys.argv[2],"last_assistant_message":sys.argv[3]}))' "$T/done-repo" "$T/done-turn.jsonl" "$1")"
+}
+check "done check: short promise in clean Git reaches the judge" "dc_reply 'I will run the tests next and report the results.' | grep -q '\"decision\": \"block\"'"
+check "done check: contracted promise reaches the judge" "dc_reply 'I’ll run the tests next.' | grep -q '\"decision\": \"block\"'"
+check "done check: singular contracted going-to promise reaches the judge" "dc_reply \"I'm going to run the tests next.\" | grep -q '\"decision\": \"block\"'"
+check "done check: plural contracted going-to promise reaches the judge" "dc_reply 'We’re going to run the tests next.' | grep -q '\"decision\": \"block\"'"
+check "done check: short completed check in clean Git skips the judge" "[ \"\$(dc_reply 'Ran pytest: 12 passed, exit 0.')\" = '{}' ]"
 
 # 5b. continue-ledger.sh: a focused session goes on while rows are open, with a no-progress guard
 CL="$T/cl"; mkdir -p "$CL/co"; printf '| ID | Track | Action | Serves | Owner | Status | Due | Evidence |\n|---|---|---|---|---|---|---|---|\n| G4 | growth | Free checklist | x | me | todo | | |\n| A1 | admin | Tax | x | owner | owner | | |\n' > "$CL/co/COMPANY.md"

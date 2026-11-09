@@ -2,10 +2,10 @@
 """Stop hook: the done check, for Claude Code and Codex.
 
 Lets a turn end when its last message shows finished or owner-blocked work (a NEEDS YOU line,
-"Goal condition met", "no change", or a short answer with a clean working tree). Otherwise a
-low-effort judge (claude haiku or codex) reads the user's last request and the agent's last message
-and answers DONE or CONTINUE; CONTINUE becomes the next turn's prompt. One continuation per turn
-(stop_hook_active). Any failure lets the turn end: this hook never traps a session.
+"Goal condition met", "no change", or a brief reply in a clean working tree). Common first-person
+work promises go to the low-effort judge (claude haiku or codex), even when brief. The judge reads the
+last request and reply and answers DONE or CONTINUE. CONTINUE becomes the next turn's prompt.
+The stop_hook_active guard limits this to one continuation per turn. A judge failure lets the turn end.
 
 Usage in a hook config: python3 -I done-check.py --judge claude   (or --judge codex)
 Env: DONE_CHECK_MODEL (claude judge model, default haiku), DONE_CHECK_PROFILE (codex profile).
@@ -125,7 +125,13 @@ low = last.lower()
 if "needs you" in low or "goal condition met" in low or low.rstrip(".") in ("no change", "done", ""):
     out({})
 dirty = git_dirty(cwd)
-if len(prompt.split()) <= 25 and len(last.split()) <= 120 and dirty in ("clean", "not a git repo"):
+short_turn = len(prompt.split()) <= 25 and len(last.split()) <= 120
+promises_work = re.search(
+    r"\b(?:(?:i|we)(?:['’]ll|\s+will|\s+plan\s+to)|"
+    r"(?:i(?:['’]m|\s+am)|we(?:['’]re|\s+are))\s+going\s+to)\s+",
+    low,
+)
+if short_turn and dirty in ("clean", "not a git repo") and not promises_work:
     out({})  # a short request answered briefly with nothing changed on disk
 verdict = ask_judge(
     "You are a done-check judge for a coding agent. Reply with exactly one line: DONE, or CONTINUE: <one sentence "
