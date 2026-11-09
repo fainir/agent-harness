@@ -2,8 +2,8 @@
 """Stop hook: the done check, for Claude Code and Codex.
 
 Lets a turn end when its last message shows finished or owner-blocked work (a NEEDS YOU line,
-"Goal condition met", "no change", or a brief reply in a clean working tree). Replies that promise
-future work go to the low-effort judge (claude haiku or codex), even when brief. The judge reads the
+"Goal condition met", "no change", or a brief reply in a clean working tree). Common first-person
+work promises go to the low-effort judge (claude haiku or codex), even when brief. The judge reads the
 last request and reply and answers DONE or CONTINUE. CONTINUE becomes the next turn's prompt.
 The stop_hook_active guard limits this to one continuation per turn. A judge failure lets the turn end.
 
@@ -126,7 +126,11 @@ if "needs you" in low or "goal condition met" in low or low.rstrip(".") in ("no 
     out({})
 dirty = git_dirty(cwd)
 short_turn = len(prompt.split()) <= 25 and len(last.split()) <= 120
-promises_work = re.search(r"\b(?:i|we)(?:['’]ll|\s+will|\s+plan\s+to|\s+(?:am|are)\s+going\s+to)\s+", low)
+promises_work = re.search(
+    r"\b(?:(?:i|we)(?:['’]ll|\s+will|\s+plan\s+to)|"
+    r"(?:i(?:['’]m|\s+am)|we(?:['’]re|\s+are))\s+going\s+to)\s+",
+    low,
+)
 if short_turn and dirty in ("clean", "not a git repo") and not promises_work:
     out({})  # a short request answered briefly with nothing changed on disk
 verdict = ask_judge(
