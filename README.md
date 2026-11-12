@@ -13,11 +13,23 @@
 
 Skills, rules and hooks that turn a coding agent (Claude Code, Codex, or any agent that reads `AGENTS.md` and Agent Skills) into a product team, a CEO or a portfolio manager, depending on what you ask. You talk in plain words. The agent sizes the job, finishes it, verifies it with real evidence, and asks you only for what it truly cannot do, one exact action at a time.
 
+## Try the checks locally
+
+With Bash, Git and Python 3, clone the project and run its [test suite](tests/test.sh) locally.
+The tests feed sample replies to the Stop hook using a stand-in for the model.
+Install and uninstall run in a temporary home directory.
+
 ```bash
-git clone https://github.com/fainir/agent-harness ~/agent-harness && ~/agent-harness/install.sh
+trial_dir=$(mktemp -d) &&
+  git clone --depth 1 https://github.com/fainir/agent-harness "$trial_dir/agent-harness" &&
+  bash "$trial_dir/agent-harness/tests/test.sh"
 ```
 
-Then just talk to your agent. Every big job ends with a report in the same shape (format from the
+A passing trial exits with status 0 and ends with a failure count of zero.
+The trial checkout is available at `$trial_dir/agent-harness`.
+[Install agent-harness](#install) to use it in your agent.
+
+Once installed, every big job ends with a report in the same shape (format from the
 `run-company` skill):
 
 ```
