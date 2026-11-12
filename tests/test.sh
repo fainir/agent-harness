@@ -218,6 +218,7 @@ printf '{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"my-own-hook.sh"
 inst() { HOME="$H" bash "$HERE/install.sh" "$@" >/dev/null 2>&1; }
 inst; inst
 check "install: skills linked for every tool" "[ -L '$H/.agents/skills/ship' ] && [ -L '$H/.claude/skills/learn' ] && [ -L '$H/.codex/skills/run-company' ] && [ -L '$H/.agents/skills/workspace' ]"
+check "install: Codex and Claude Code read the packaged company skill" "cmp -s '$HERE/skills/run-company/SKILL.md' '$H/.codex/skills/run-company/SKILL.md' && cmp -s '$HERE/skills/run-company/SKILL.md' '$H/.claude/skills/run-company/SKILL.md'"
 check "install: one rules block after two installs" "[ \"\$(grep -c 'agent-harness:start' '$H/.claude/CLAUDE.md')\" = 1 ] && grep -q 'my own rules' '$H/.claude/CLAUDE.md'"
 check "install: hooks added once, user hooks kept" "python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1]))[\"hooks\"]; s=json.dumps(d); sys.exit(0 if s.count(\"done-check.py\")==1 and s.count(\"continue-ledger.sh\")==1 and \"my-own-hook.sh\" in s and \"UserPromptSubmit\" in d else 1)' '$H/.claude/settings.json'"
 check "install: zsh-guard runs before Bash calls only (matcher Bash), and not for Codex" "python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1]))[\"hooks\"][\"PreToolUse\"]; g=[x for x in d if any(\"zsh-guard.sh\" in c[\"command\"] for c in x[\"hooks\"])]; sys.exit(0 if len(g)==1 and g[0].get(\"matcher\")==\"Bash\" else 1)' '$H/.claude/settings.json' && ! grep -q zsh-guard '$H/.codex/hooks.json'"
