@@ -12,7 +12,7 @@ Assume it is broken until you have watched it work. You test as a user, not as t
 Start from `qa/README.md` "How to QA this project" (start command, test data, selectors, tricks); before you finish, add what you had to work out.
 
 1. **Fresh state**: new user / cleared storage / new test account (`qa+<flow>@example.com` style on the product's own sign-up; never a real third-party account).
-2. **Drive the real UI** at 375px and desktop (or the simulator, or the real bot channel). Click what a user clicks, type what a user types. No API shortcuts for the verdict.
+2. **Drive the real UI** at 375 CSS px and desktop (or the simulator, or the real bot channel). On each browser tab, read the actual CSS viewport and document scroll width before judging responsive layout. Name the surface you actually loaded and record overflow. Restore and read back the original viewport on that same tab, or close the temporary tab. Click what a user clicks, type what a user types. No API shortcuts for the verdict.
 3. **Unhappy paths**: wrong input, empty input, double submit, back button, refresh mid-flow, slow network, expired session, no permission. Each one either behaves well or becomes a defect row.
 4. **Watch the plumbing**: browser console has no errors; network has no 4xx/5xx except intended; no secrets or PII in URLs or logs.
 5. **Evidence**: `qa/<F-id>/<yyyy-mm-dd>-<width>.png` (one per key step) and `qa/<F-id>/notes.md` (steps, result, date, build or commit). Link `notes.md` from the row.
