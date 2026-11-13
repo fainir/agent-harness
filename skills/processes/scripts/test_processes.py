@@ -241,6 +241,29 @@ class CheckDueMarkPlan(Base):
         self.assertIn('P1 2026-11-04 | READINESS.md | Confirm the checkout result', out)
         self.assertNotIn('row: P1', out)
 
+    def test_plan_includes_product_rows_and_reviews_from_child_ledgers(self):
+        self.write(GOOD)
+        project = os.path.join(self.tmp.name, 'acme [store]')
+        os.rename(self.d, project)
+        self.d = project
+        with open(os.path.join(self.d, 'store', 'READINESS.md'), 'w') as f:
+            f.write('## Flows\n\n| ID | Flow (user words) | Surfaces | Status | Due | Evidence |\n'
+                    '|---|---|---|---|---|---|\n'
+                    '| P1 | Fix checkout \\| recovery | phone | todo | - | - |\n'
+                    '| F5 | Read the checkout result | phone | waiting | 2026-11-04 | - |\n'
+                    '| F6 | Another worker owns this | phone | building (another worker) | - | - |\n'
+                    '| F7 | Resume my checkout check | phone | building (me) | - | - |\n')
+
+        code, out = run(P.cmd_plan, self.d)
+        self.assertEqual(code, 0, out)
+        build = out.split('A build', 1)[1].split('B growth', 1)[0]
+        self.assertIn('row: P1 Fix checkout | recovery (todo)', build)
+        self.assertIn('store/READINESS.md', build)
+        self.assertIn('F5 2026-11-04 | store/READINESS.md | Read the checkout result', out)
+        self.assertIn('row: F7 Resume my checkout check (building)', build)
+        self.assertNotIn('row: F6', out)
+        self.assertEqual(out.count('Fix checkout | recovery'), 1)
+
     def test_check_flags_placeholders_bad_runner_missing_task_late_overlap_and_unknown_rows(self):
         bad = GOOD.replace('- Diagnosis: 0 sales, 52 visits a week', '- Diagnosis: <the one challenge>')
         bad = bad.replace('G1 outreach, S1 inbox', 'G1 outreach, G2 old, Z9 ghost')

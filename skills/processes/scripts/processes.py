@@ -162,7 +162,8 @@ def load(d):
 
 def iter_ledger_rows(d):
     """Yield each row with its source ledger, including IDs reused across files."""
-    for name in LEDGERS:
+    product_ledgers = sorted(glob.glob(os.path.join(glob.escape(d), '*', 'READINESS.md')))
+    for name in (*LEDGERS, *(os.path.relpath(p, d) for p in product_ledgers)):
         heading, head = '', None
         for line in read(os.path.join(d, name)).split('\n'):
             if line.startswith('## '):
@@ -171,7 +172,7 @@ def iter_ledger_rows(d):
             if not line.startswith('|'):
                 head = None
                 continue
-            c = cells(line)
+            c = [c.strip().replace(r'\|', '|') for c in re.split(r'(?<!\\)\|', line.strip().strip('|'))]
             if head is None:
                 head = [h.lower() for h in c]
                 continue
@@ -180,16 +181,19 @@ def iter_ledger_rows(d):
             si, ti, ai = col(head, 'status'), col(head, 'track'), col(head, 'action')
             if ai is None:
                 ai = col(head, 'flow')
-            st = c[si].split(' ')[0].strip('(').lower() if si is not None and si < len(c) else ''
+            raw_status = c[si].lower() if si is not None and si < len(c) else ''
+            st = raw_status.split(' ')[0]
+            if st == 'building' and raw_status not in ('building', 'building (me)'):
+                st = raw_status
             di = col(head, 'due')
             due = c[di] if di is not None and di < len(c) else ''
-            track = c[ti] if ti is not None and ti < len(c) else heading
+            track = c[ti] if ti is not None and ti < len(c) else ('product' if os.path.basename(name) == 'READINESS.md' else heading)
             action = c[ai] if ai is not None and ai < len(c) else (c[2] if len(c) > 2 else '')
             yield name, c[0], st, track, action, due
 
 
 def ledger_rows(entries):
-    """Keep existing first-ledger precedence for buildable rows and strategy references."""
+    """Keep existing first-ledger precedence for strategy references."""
     out = {}
     for _, row_id, status, track, action, _ in entries:
         out.setdefault(row_id, (status, track, action))
@@ -368,7 +372,6 @@ def cmd_plan(d):
         print('no PROCESSES.md in %s: run init' % d)
         return 1
     entries = list(iter_ledger_rows(d))
-    rows = ledger_rows(entries)
     due = {pr['id'].lower(): '  due: %s %s | runner: %s' % (pr['id'], pr['name'], pr['runner'])
            for pr, _ in due_list(model)}
     clash = {(a, b) for a, b, _ in overlaps(model['lanes'])}
@@ -376,7 +379,8 @@ def cmd_plan(d):
         words = [w.strip().lower() for w in re.split(r'[,;]| and ', ln['covers']) if w.strip()]
         covered = {re.sub(r'\W', '', w) for w in ln['covers'].lower().split()}
         mine = [due.pop(pid) for pid in list(due) if pid in covered]
-        cand = [(k, v) for k, v in rows.items() if v[0] in OPEN and any(w.split()[0] in (v[1] or '').lower() for w in words if w.split())]
+        cand = [(ledger, row_id, status, action) for ledger, row_id, status, track, action, _ in entries
+                if status in OPEN and any(w.split()[0] in track.lower() for w in words if w.split())]
         try:
             wip = int(re.sub(r'\D', '', ln['wip']) or 1)
         except ValueError:
@@ -384,8 +388,8 @@ def cmd_plan(d):
         print('%s (%s, WIP %d, owns %s)%s' % (ln['lane'], ln['runner'], wip, ln['owns'] or '-', ' waits on ' + ln['waits'] if ln['waits'] not in ('', '-') else ''))
         for line in mine:
             print(line)
-        for k, v in cand[:wip + 2]:
-            print('  row: %s %s (%s)' % (k, v[2][:90], v[0]))
+        for ledger, row_id, status, action in cand[:wip + 2]:
+            print(f'  row: {row_id} {action[:90]} ({status}) | {ledger}')
         if not mine and not cand:
             print('  nothing open')
     free = [ln['lane'] for ln in model['lanes'] if ln['waits'] in ('', '-')]
