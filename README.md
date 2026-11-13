@@ -62,10 +62,17 @@ Next: app store screenshots, next run in 3 hours
 ## Install
 
 ```bash
-git clone https://github.com/fainir/agent-harness ~/agent-harness && ~/agent-harness/install.sh
+git clone https://github.com/fainir/agent-harness ~/agent-harness
+cd ~/agent-harness
+./install.sh --dry-run
+./install.sh
 ```
 
-The installer is idempotent and keeps your own content. It links the skills into `~/.agents/skills` (and `~/.claude/skills`, `~/.codex/skills`), adds a marked rules block to `~/.claude/CLAUDE.md` and `~/.codex/AGENTS.md`, and registers the hooks in `~/.claude/settings.json` and `~/.codex/hooks.json`. In Codex, run `/hooks` once to trust the hooks. New chats pick everything up; running Claude chats are told to re-read the rules after their next tool call. Remove it all with `./install.sh --uninstall`.
+`--dry-run` lists directories, skill links, rule files, hook settings and backups before making changes. Use `./install.sh --dry-run --tool codex` or `./install.sh --dry-run --tool claude` to see one tool's plan. Drop `--dry-run` to apply that plan. Run `./install.sh --help` for the full options.
+
+At skill and hook link paths, the installer preserves existing files, directories and conflicting symlinks. Use `--replace-links` to explicitly replace conflicting symlinks. Run uninstall from the same checkout to restore their original targets, including relative and broken links. If you changed a path after installation, uninstall keeps your change and prints the saved target's location.
+
+The installer links shared skills into `~/.agents/skills` and the selected tools' skill folders. It adds a marked block to their rules files and registers the hooks in their settings. If a rules or settings file is a symlink, the preview shows the target file to be edited. In Codex, run `/hooks` once to trust the hooks. Run `./install.sh --uninstall` to remove this installation's links, rules block and hook entries. If an older version already overwrote a link, recover its original target from your own backup.
 
 Other agents: point them at `~/.agents/skills` and paste `rules/harness.md` into their `AGENTS.md` or system prompt.
 
