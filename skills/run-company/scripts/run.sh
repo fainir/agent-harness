@@ -5,6 +5,7 @@
 # Usage: run.sh [dir]
 # Env:   RUNNER=claude|codex (default claude)  PROMPT="continue"  TIMEOUT=2400 (seconds)  CLAUDE_FLAGS  CODEX_FLAGS
 set -uo pipefail
+SELF="$(cd "$(dirname "$0")" && pwd)"
 DIR="$(cd "${1:-.}" && pwd)"; cd "$DIR" || exit 1
 RUNNER="${RUNNER:-claude}"; PROMPT="${PROMPT:-continue}"; TIMEOUT="${TIMEOUT:-2400}"
 CLAUDE_FLAGS="${CLAUDE_FLAGS:---permission-mode bypassPermissions --no-session-persistence}"
@@ -16,12 +17,23 @@ ledger=""; for f in READINESS.md COMPANY.md PORTFOLIO.md; do [ -f "$f" ] && { le
 mkdir -p .runtime/runs; lock=.runtime/run.lock; LOCK_MIN=$(( TIMEOUT / 60 )); [ "$LOCK_MIN" -gt 0 ] || LOCK_MIN=1
 # Idle gate (opt-in: the folder has an executable signals.sh printing its outside state, such as store health and
 # order or message counts): with no buildable row and the same ledger, OWNER.md, git HEAD and signals as after the
-# last model run, skip the model and spend no tokens. A real run still happens at least once a day (FORCE=1 forces one).
+# last model run, skip the model if no calendar process for this runner is due. A real run still happens at least
+# once a day (FORCE=1 forces one).
 signature() { { cat "$ledger" OWNER.md 2>/dev/null; git rev-parse HEAD 2>/dev/null; ./signals.sh 2>/dev/null; } | cksum | cut -d' ' -f1; }
+has_due_calendar_work() {
+  local planner="$SELF/../../processes/scripts/processes.py"
+  [ -f PROCESSES.md ] && [ -r "$planner" ] || return 1
+  # The due report already filters by runner. Skip relative intervals (including the coordinator's cadence)
+  # and checks that run whenever the coordinator starts.
+  python3 -I "$planner" due . --runner loop 2>/dev/null | awk -F '[|]' '
+    tolower($2) ~ /^[[:space:]]*(daily|every day|weekdays|weekly|monthly)([[:space:]]|$)/ { due = 1 }
+    END { exit !due }
+  '
+}
 gate=0; [ -x ./signals.sh ] && gate=1
 if [ "$gate" = 1 ] && [ "${FORCE:-0}" != 1 ] && [ -f .runtime/idle.sig ] && [ -z "$(find .runtime/idle.sig -mmin +1440 2>/dev/null)" ] \
    && ! grep -E '^\|[[:space:]]*([A-Z]{1,3}[0-9]+|[A-Z][A-Za-z/ ]*:)' "$ledger" | grep -qE '\|[[:space:]]*(todo|building|building \(me\))[[:space:]]*\|' \
-   && [ "$(signature)" = "$(cat .runtime/idle.sig)" ]; then  # rows are lines whose first cell is an ID, as in continue-ledger.sh
+   && [ "$(signature)" = "$(cat .runtime/idle.sig)" ] && ! has_due_calendar_work; then
   echo "$(date +%Y%m%d-%H%M) $ledger idle: no buildable row and no change, model not run" >> .runtime/runs/summary.log; echo "idle: no change"; exit 0
 fi
 # Someone is working here (an open Claude Code or Codex session, or a person): a file changed in the last BUSY_MIN

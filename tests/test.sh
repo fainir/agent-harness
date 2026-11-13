@@ -164,6 +164,28 @@ check "run.sh: a file changed by a working session keeps the scheduled run out o
 BUSY_MIN=30 igrun
 check "run.sh: once the session's edit is older than the last check, the scheduled run goes on" "[ \"\$(wc -l < '$IG/calls' | tr -d ' ')\" = 5 ]"
 
+# A calendar deadline can arrive while the ledger and external signals stay identical.
+IC="$T/ig-calendar"; mkdir -p "$IC/co" "$IC/run-company/scripts" "$IC/processes/scripts"
+cp "$HERE/skills/run-company/scripts/run.sh" "$IC/run-company/scripts/"
+cp "$IG/co/signals.sh" "$IC/co/"
+printf '| ID | Track | Status |\n| M3 | money | waiting |\n' > "$IC/co/COMPANY.md"
+touch "$IC/co/PROCESSES.md"
+cat > "$IC/processes/scripts/processes.py" <<'PY'
+import os, sys
+
+assert sys.argv[1:] == ['due', '.', '--runner', 'loop']
+print('P1 Coordinator | every 3h | loop | how: run.sh | last -')
+print('P2 Numbers | every run | loop | how: signals.sh | last -')
+if os.environ.get('PROCESSES_NOW') == '2026-12-01 00:01':
+    print('P10 Reconcile month | monthly 1 | loop | how: ledger | last 2026-11-01')
+PY
+icrun() { PROCESSES_NOW="$1" PATH="$IG/bin:$PATH" TIMEOUT=30 BUSY_MIN=0 bash "$IC/run-company/scripts/run.sh" "$IC/co" 2>&1; }
+icrun '2026-11-30 23:59' >/dev/null
+check "run.sh: coordinator cadence and every-run checks preserve idle" "icrun '2026-11-30 23:59' | grep -q '^idle:'"
+check "run.sh: a due headless month close wakes the runner on unchanged signals" "icrun '2026-12-01 00:01' | grep -q '^== .*exit 0'"
+check "run.sh: a pending close stays eligible until the planner clears it" "icrun '2026-12-01 00:01' | grep -q '^== .*exit 0'"
+check "run.sh: an empty calendar after reconciliation idles again" "icrun '2026-12-01 00:02' | grep -q '^idle:'"
+
 # 6c. per-project learning and cross-project promotion
 PN="$T/pn"; mkdir -p "$PN/a/sub" "$PN/b"; printf '# a\n\n## Rules\n\n- keep it small\n' > "$PN/a/AGENTS.md"; (cd "$PN/b" && git init -q)
 bash "$HERE/skills/learn/scripts/project-note.sh" "Node 24 rejects node --test tests/; pass a glob" "$PN/a/sub" >/dev/null
