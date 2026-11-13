@@ -164,6 +164,38 @@ check "run.sh: a file changed by a working session keeps the scheduled run out o
 BUSY_MIN=30 igrun
 check "run.sh: once the session's edit is older than the last check, the scheduled run goes on" "[ \"\$(wc -l < '$IG/calls' | tr -d ' ')\" = 5 ]"
 
+# The company can have its own ledger, a portfolio, and a product readiness ledger.
+IGM="$T/ig-multiple"
+mkdir -p "$IGM/store" "$IGM/bin"
+printf '#!/bin/sh\nprintf "run\\n" >> calls\n' > "$IGM/bin/claude"
+cp "$IGM/bin/claude" "$IGM/bin/codex"
+printf '#!/bin/sh\nprintf "unchanged\\n"\n' > "$IGM/signals.sh"
+chmod +x "$IGM/bin/claude" "$IGM/bin/codex" "$IGM/signals.sh"
+printf '| ID | Track | Action | Status |\n| G1 | growth | read later | waiting |\n' > "$IGM/COMPANY.md"
+igmrun() { CLAUDE_BIN="$IGM/bin/claude" PATH="$IGM/bin:$PATH" RUNNER="$1" TIMEOUT=30 BUSY_MIN=0 bash "$HERE/skills/run-company/scripts/run.sh" "$IGM" >/dev/null 2>&1; }
+igmflow() { printf '%s\n' '| ID | Flow | Status | Evidence |' "| F5b | checkout \| recovery | $1 | todo |" > "$IGM/store/READINESS.md"; }
+igmportfolio() { printf '| ID | Project | Stage |\n| D1 | product | %s |\n' "$1" > "$IGM/PORTFOLIO.md"; }
+for runner in claude codex; do
+  rm -f "$IGM/.runtime/idle.sig" "$IGM/calls"
+  igmflow verified
+  igmportfolio waiting
+  igmrun "$runner"; igmrun "$runner"
+  check "run.sh $runner: a todo in evidence does not wake an unchanged ledger" "[ \"\$(wc -l < '$IGM/calls' | tr -d ' ')\" = 1 ]"
+  igmflow todo
+  igmrun "$runner"; igmrun "$runner"
+  check "run.sh $runner: open product work wakes each scheduled run" "[ \"\$(wc -l < '$IGM/calls' | tr -d ' ')\" = 3 ]"
+  igmflow 'building (another worker)'
+  igmrun "$runner"; igmrun "$runner"
+  check "run.sh $runner: changed product state wakes once and a named worker stays idle" "[ \"\$(wc -l < '$IGM/calls' | tr -d ' ')\" = 4 ]"
+  igmportfolio todo
+  igmrun "$runner"; igmrun "$runner"
+  check "run.sh $runner: a buildable portfolio row keeps the runner active" "[ \"\$(wc -l < '$IGM/calls' | tr -d ' ')\" = 6 ]"
+  igmportfolio waiting
+  printf '\n| Gate | Status | Evidence |\n|---|---|---|\n| Security: access checks | todo | |\n' >> "$IGM/store/READINESS.md"
+  igmrun "$runner"; igmrun "$runner"
+  check "run.sh $runner: a buildable release gate keeps the runner active" "[ \"\$(wc -l < '$IGM/calls' | tr -d ' ')\" = 8 ]"
+done
+
 # 6c. per-project learning and cross-project promotion
 PN="$T/pn"; mkdir -p "$PN/a/sub" "$PN/b"; printf '# a\n\n## Rules\n\n- keep it small\n' > "$PN/a/AGENTS.md"; (cd "$PN/b" && git init -q)
 bash "$HERE/skills/learn/scripts/project-note.sh" "Node 24 rejects node --test tests/; pass a glob" "$PN/a/sub" >/dev/null
