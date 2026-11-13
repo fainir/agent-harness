@@ -164,6 +164,86 @@ check "run.sh: a file changed by a working session keeps the scheduled run out o
 BUSY_MIN=30 igrun
 check "run.sh: once the session's edit is older than the last check, the scheduled run goes on" "[ \"\$(wc -l < '$IG/calls' | tr -d ' ')\" = 5 ]"
 
+# The company can have its own ledger, a portfolio, and a product readiness ledger.
+IGM="$T/ig-multiple"
+mkdir -p "$IGM/store" "$IGM/bin"
+printf '#!/bin/sh\nprintf "run\\n" >> calls\n' > "$IGM/bin/claude"
+cp "$IGM/bin/claude" "$IGM/bin/codex"
+printf '#!/bin/sh\nprintf "unchanged\\n"\n' > "$IGM/signals.sh"
+chmod +x "$IGM/bin/claude" "$IGM/bin/codex" "$IGM/signals.sh"
+printf '| ID | Track | Action | Status |\n| G1 | growth | read later | waiting |\n' > "$IGM/COMPANY.md"
+igmrun() { CLAUDE_BIN="$IGM/bin/claude" PATH="$IGM/bin:$PATH" RUNNER="$1" TIMEOUT=30 BUSY_MIN=0 bash "$HERE/skills/run-company/scripts/run.sh" "$IGM" >/dev/null 2>&1; }
+igmflow() { printf '%s\n' '| ID | Flow | Status | Evidence |' "| F5b | checkout \| recovery | $1 | todo |" > "$IGM/store/READINESS.md"; }
+igmportfolio() { printf '| ID | Project | Stage |\n| D1 | product | %s |\n' "$1" > "$IGM/PORTFOLIO.md"; }
+for runner in claude codex; do
+  rm -f "$IGM/.runtime/idle.sig" "$IGM/calls"
+  igmflow verified
+  igmportfolio waiting
+  igmrun "$runner"; igmrun "$runner"
+  check "run.sh $runner: a todo in evidence does not wake an unchanged ledger" "[ \"\$(wc -l < '$IGM/calls' | tr -d ' ')\" = 1 ]"
+  igmflow todo
+  igmrun "$runner"; igmrun "$runner"
+  check "run.sh $runner: open product work wakes each scheduled run" "[ \"\$(wc -l < '$IGM/calls' | tr -d ' ')\" = 3 ]"
+  igmflow 'building (another worker)'
+  igmrun "$runner"; igmrun "$runner"
+  check "run.sh $runner: changed product state wakes once and a named worker stays idle" "[ \"\$(wc -l < '$IGM/calls' | tr -d ' ')\" = 4 ]"
+  igmportfolio todo
+  igmrun "$runner"; igmrun "$runner"
+  check "run.sh $runner: a buildable portfolio row keeps the runner active" "[ \"\$(wc -l < '$IGM/calls' | tr -d ' ')\" = 6 ]"
+  igmportfolio waiting
+  printf '\n| Gate | Status | Evidence |\n|---|---|---|\n| Security: access checks | todo | |\n' >> "$IGM/store/READINESS.md"
+  igmrun "$runner"; igmrun "$runner"
+  check "run.sh $runner: a buildable release gate keeps the runner active" "[ \"\$(wc -l < '$IGM/calls' | tr -d ' ')\" = 8 ]"
+done
+
+# A dashboard refresh writes the same three generated files regardless of which runner is selected.
+cp "$IG/bin/claude" "$IG/bin/codex"
+for engine in claude codex; do
+  before=$(wc -l < "$IG/calls" | tr -d ' ')
+  sleep 1
+  mkdir -p "$IG/co/.workspace"
+  touch "$IG/co/.workspace/artifact.html" "$IG/co/.workspace/index.html" "$IG/co/.workspace/data.json"
+  RUNNER="$engine" BUSY_MIN=30 igrun
+  check "run.sh: $engine runs with a fresh generated dashboard" "[ \"\$(wc -l < '$IG/calls' | tr -d ' ')\" = $((before + 1)) ]"
+  sleep 1
+  printf '# operator notes\n' > "$IG/co/.workspace/notes.md"
+  RUNNER="$engine" BUSY_MIN=30 igrun
+  check "run.sh: $engine still defers on a fresh operator file under .workspace" "[ \"\$(wc -l < '$IG/calls' | tr -d ' ')\" = $((before + 1)) ] && tail -1 '$IG/co/.runtime/runs/summary.log' | grep -q 'busy: .workspace/notes.md'"
+done
+
+# A failed model run must retry even when the inputs are unchanged.
+for runner in claude codex; do
+  retry="$T/retry-$runner"
+  mkdir -p "$retry/bin"
+  printf '| G1 | growth | Check sales | Orders | me | waiting | - | - |\n' > "$retry/COMPANY.md"
+  printf '#!/bin/sh\nprintf "same signals\\n"\n' > "$retry/signals.sh"
+  cat > "$retry/bin/$runner" <<'SH'
+#!/bin/sh
+echo called >> calls
+if [ -f hang ]; then
+  trap 'echo terminated >> calls; exit 0' TERM
+  while :; do sleep 0.1; done
+fi
+test -f recovered || exit 1
+SH
+  chmod +x "$retry/signals.sh" "$retry/bin/$runner"
+  retry_run() {
+    PATH="$retry/bin:$PATH" CLAUDE_BIN="$retry/bin/$runner" RUNNER="$runner" TIMEOUT="${TIMEOUT:-30}" BUSY_MIN=0 \
+      bash "$HERE/skills/run-company/scripts/run.sh" "$retry" >/dev/null 2>&1
+  }
+  retry_run; retry_status=$?
+  check "run.sh ($runner): a failed first run has no idle signature" "[ '$retry_status' = 1 ] && [ ! -e '$retry/.runtime/idle.sig' ]"
+  touch "$retry/recovered"; retry_run; retry_run
+  check "run.sh ($runner): retries unchanged signals once, then idles after recovery" "[ -s '$retry/.runtime/idle.sig' ] && [ \"\$(wc -l < '$retry/calls' | tr -d ' ')\" = 2 ]"
+  rm "$retry/recovered"; FORCE=1 retry_run; retry_status=$?
+  touch "$retry/recovered"; retry_run
+  check "run.sh ($runner): a forced failure invalidates an earlier successful signature" "[ '$retry_status' = 1 ] && [ \"\$(wc -l < '$retry/calls' | tr -d ' ')\" = 4 ]"
+  touch "$retry/hang"; TIMEOUT=1 FORCE=1 retry_run; retry_status=$?
+  check "run.sh ($runner): a watchdog timeout is a failure even after a graceful exit" "[ '$retry_status' = 124 ] && grep -qx terminated '$retry/calls' && [ ! -e '$retry/.runtime/idle.sig' ]"
+  rm "$retry/hang"; retry_run
+  check "run.sh ($runner): retries unchanged signals after the watchdog timeout" "[ \"\$(grep -c '^called$' '$retry/calls')\" = 6 ]"
+done
+
 # 6c. per-project learning and cross-project promotion
 PN="$T/pn"; mkdir -p "$PN/a/sub" "$PN/b"; printf '# a\n\n## Rules\n\n- keep it small\n' > "$PN/a/AGENTS.md"; (cd "$PN/b" && git init -q)
 bash "$HERE/skills/learn/scripts/project-note.sh" "Node 24 rejects node --test tests/; pass a glob" "$PN/a/sub" >/dev/null
@@ -213,17 +293,92 @@ perl -pi -e 's/\| todo \|/| building (me) |/' "$WS/COMPANY.md" && wsgen "$WS" >/
 check "workspace: --diff prints only what a republish changes, not the publish wrapper" "out=\$(wsgen --diff '$T/ws-pub.html' '$WS/.workspace/artifact.html'); echo \"\$out\" | grep -q '^rows: 1 new or changed' && ! echo \"\$out\" | grep -q '^template' && [ \"\$(wsgen --diff '$WS/.workspace/artifact.html' '$WS/.workspace/artifact.html')\" = 'no changes since the published page' ] && ! wsgen --diff '$T/no-such-page.html' '$WS/.workspace/artifact.html' 2>&1 | grep -q 'no workspace data'"
 
 # 7. install, reinstall, uninstall in a throwaway HOME
+check "processes: plan surfaces dated result reviews separately from work" "python3 -I -B '$HERE/skills/processes/scripts/test_processes.py'"
 H="$T/home"; mkdir -p "$H/.claude" "$H/.codex"; printf '# my own rules\n' > "$H/.claude/CLAUDE.md"
 printf '{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"my-own-hook.sh"}]}]}}\n' > "$H/.claude/settings.json"
 inst() { HOME="$H" bash "$HERE/install.sh" "$@" >/dev/null 2>&1; }
+mkdir -p "$H/.agents/skills/processes" "$H/.claude/skills" "$H/.codex/skills"
+ln -s "$H/.agents/skills/processes" "$H/.claude/skills/processes"
+ln -s "$H/.agents/skills/processes" "$H/.codex/skills/processes"
+inst --uninstall
+check "uninstall: an existing standalone process skill and aliases are retained" "[ -d '$H/.agents/skills/processes' ] && [ -L '$H/.claude/skills/processes' ] && [ -L '$H/.codex/skills/processes' ]"
+rm "$H/.claude/skills/processes" "$H/.codex/skills/processes"
+rmdir "$H/.agents/skills/processes"
 inst; inst
 check "install: skills linked for every tool" "[ -L '$H/.agents/skills/ship' ] && [ -L '$H/.claude/skills/learn' ] && [ -L '$H/.codex/skills/run-company' ] && [ -L '$H/.agents/skills/workspace' ]"
+PLAN="$T/process-plan"; mkdir -p "$PLAN"
+printf '# Test processes\n' > "$PLAN/PROCESSES.md"
+printf '| ID | Track | Action | Status | Due |\n|---|---|---|---|---|\n| G2 | growth | Read the test result | waiting | 2000-01-01 |\n' > "$PLAN/COMPANY.md"
+check "install: both tools can run the packaged process planner" "HOME='$H' python3 -I '$H/.codex/skills/processes/scripts/processes.py' plan '$PLAN' | grep -q '^  G2 2000-01-01 | COMPANY.md | Read the test result$' && HOME='$H' python3 -I '$H/.claude/skills/processes/scripts/processes.py' plan '$PLAN' | grep -q '^  G2 2000-01-01 | COMPANY.md | Read the test result$'"
+for runner in claude codex; do
+  close="$T/close-$runner"
+  mkdir -p "$close/bin"
+  printf '#!/bin/sh\nprintf "run\\n" >> calls\n' > "$close/bin/$runner"
+  printf '#!/bin/sh\nprintf "unchanged\\n"\n' > "$close/signals.sh"
+  chmod +x "$close/bin/$runner" "$close/signals.sh"
+  printf '| ID | Status |\n|---|---|\n| M3 | waiting |\n' > "$close/COMPANY.md"
+  cat > "$close/PROCESSES.md" <<'MD'
+## Processes
+
+| ID | Process | When | Runner | How | Done when | Last run | Health |
+|---|---|---|---|---|---|---|---|
+| P1 | Coordinator | every 3h | loop | run.sh | run | 2026-11-29 00:00 | ok |
+| P2 | Numbers | every run | loop | signals.sh | read | 2026-11-30 20:00 | ok |
+| P10 | Reconcile month | monthly 1 | loop | money/ledger.md | reconciled | 2026-11-01 08:00 | ok |
+| P13 | Browser work | daily 10:20 | task:browser | Chrome | checked | 2026-11-29 10:20 | ok |
+MD
+  close_run() {
+    HOME="$H" PROCESSES_NOW="$1" PATH="$close/bin:$PATH" RUNNER="$runner" TIMEOUT=30 BUSY_MIN=0 \
+      bash "$H/.$runner/skills/run-company/scripts/run.sh" "$close"
+  }
+  close_run '2026-11-30 23:59' > "$close/first"
+  check "install: $runner idles before the due month close even with a due browser task" "grep -q 'exit 0' '$close/first' && close_run '2026-11-30 23:59' | grep -q '^idle:'"
+  check "install: $runner wakes on unchanged signals when the packaged planner finds a due close" "close_run '2026-12-01 00:01' | grep -q 'exit 0' && close_run '2026-12-01 00:02' | grep -q 'exit 0' && [ \"\$(wc -l < '$close/calls' | tr -d ' ')\" = 3 ]"
+  PROCESSES_NOW='2026-12-01 00:03' python3 -I "$H/.$runner/skills/processes/scripts/processes.py" mark "$close" P10 ok > "$close/marked"
+  check "install: $runner resumes idle after the planner records the close" "grep -q '^P10 marked ok' '$close/marked' && close_run '2026-12-01 00:04' | grep -q '^idle:' && [ \"\$(wc -l < '$close/calls' | tr -d ' ')\" = 3 ]"
+done
+check "install: both tools retain the buyer reach and profit guidance" "cmp -s '$HERE/skills/run-company/SKILL.md' '$H/.codex/skills/run-company/SKILL.md' && cmp -s '$HERE/skills/run-company/SKILL.md' '$H/.claude/skills/run-company/SKILL.md' && grep -Fq 'record demand inconclusive' '$H/.codex/skills/run-company/SKILL.md' && grep -Fq 'Weak reach calls for an approved placement' '$H/.codex/skills/run-company/SKILL.md' && grep -Fq 'purchase rate for the same offer and source' '$H/.claude/skills/run-company/SKILL.md'"
 check "install: one rules block after two installs" "[ \"\$(grep -c 'agent-harness:start' '$H/.claude/CLAUDE.md')\" = 1 ] && grep -q 'my own rules' '$H/.claude/CLAUDE.md'"
 check "install: hooks added once, user hooks kept" "python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1]))[\"hooks\"]; s=json.dumps(d); sys.exit(0 if s.count(\"done-check.py\")==1 and s.count(\"continue-ledger.sh\")==1 and \"my-own-hook.sh\" in s and \"UserPromptSubmit\" in d else 1)' '$H/.claude/settings.json'"
 check "install: zsh-guard runs before Bash calls only (matcher Bash), and not for Codex" "python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1]))[\"hooks\"][\"PreToolUse\"]; g=[x for x in d if any(\"zsh-guard.sh\" in c[\"command\"] for c in x[\"hooks\"])]; sys.exit(0 if len(g)==1 and g[0].get(\"matcher\")==\"Bash\" else 1)' '$H/.claude/settings.json' && ! grep -q zsh-guard '$H/.codex/hooks.json'"
 check "install: codex hooks.json written" "grep -q -- '--judge codex' '$H/.codex/hooks.json'"
 check "install: a no-progress Stop loop ends after 2 blocks (Claude settings env)" "python3 -I -c 'import json,sys; sys.exit(0 if json.load(open(sys.argv[1])).get(\"env\", {}).get(\"CLAUDE_CODE_STOP_HOOK_BLOCK_CAP\") == \"2\" else 1)' '$H/.claude/settings.json'"
+installed_size() { local tool="$1"; shift; HOME="$H" bash "$H/.$tool/skills/learn/scripts/size.sh" "$@"; }
+check "size: both installed tools count linked package skills" "installed_size codex > '$T/size-codex' && installed_size claude > '$T/size-claude' && cmp -s '$T/size-codex' '$T/size-claude' && grep -Eq '^ok +[0-9]+/90 +.*qa-flows/SKILL.md$' '$T/size-codex'"
+check "size: the installer inventory includes the company planner" "grep -Eq '^ok +[0-9]+/90 +.*processes/SKILL.md$' '$T/size-codex'"
+mv "$H/.claude/skills/processes" "$T/claude-processes"
+check "size: a missing Claude planner fails both audits" "! installed_size codex > '$T/size-planner-codex' && ! installed_size claude > '$T/size-planner-claude' && cmp -s '$T/size-planner-codex' '$T/size-planner-claude' && grep -q 'missing or different managed skill at .*/.claude/skills/processes/SKILL.md' '$T/size-planner-codex'"
+mkdir "$H/.claude/skills/processes"
+cp "$HERE/skills/processes/SKILL.md" "$H/.claude/skills/processes/SKILL.md"
+check "size: a copied skill without its planner script fails both audits" "! installed_size codex > '$T/size-planner-copy-codex' && ! installed_size claude > '$T/size-planner-copy-claude' && cmp -s '$T/size-planner-copy-codex' '$T/size-planner-copy-claude' && grep -q 'managed skill files differ at .*/.claude/skills/processes$' '$T/size-planner-copy-codex'"
+cp -R "$HERE/skills/processes/." "$H/.claude/skills/processes"
+mkdir -p "$H/.claude/skills/processes/scripts/__pycache__"
+check "size: a complete matching copy is accepted with its local cache" "installed_size claude > '$T/size-planner-copy-complete'"
+mv "$H/.claude/skills/processes" "$T/claude-processes-copy"
+mv "$T/claude-processes" "$H/.claude/skills/processes"
+mkdir -p "$H/.agents/skills/other-vendor"; seq 1 91 > "$H/.agents/skills/other-vendor/SKILL.md"
+check "size: other installed skills remain available to the explicit full audit" "installed_size codex > '$T/size-package' && ! grep -q other-vendor '$T/size-package' && ! installed_size claude --all > '$T/size-all' && grep -q '^OVER .*other-vendor/SKILL.md' '$T/size-all' && grep -q 'skill other-vendor not named' '$T/size-all'"
+mkdir -p "$T/oversized-skill"; seq 1 91 > "$T/oversized-skill/SKILL.md"
+ln -sfn "$T/oversized-skill" "$H/.agents/skills/qa-flows"
+check "size: a linked managed skill exceeding the budget fails" "! installed_size codex > '$T/size-oversized' && grep -q '^OVER .*qa-flows/SKILL.md' '$T/size-oversized'"
+rm "$H/.agents/skills/qa-flows"
+check "size: a missing managed skill fails in the package and full audits" "! installed_size claude > '$T/size-missing' && grep -q 'missing managed skill qa-flows' '$T/size-missing' && ! installed_size codex --all > '$T/size-missing-all' && grep -q 'missing managed skill qa-flows' '$T/size-missing-all'"
+check "size: an invalid explicit skill directory fails" "! HOME='$H' SKILLS_DIR='$T/absent' bash '$HERE/skills/learn/scripts/size.sh' >/dev/null 2>&1"
+ln -s "$HERE/skills/qa-flows" "$H/.agents/skills/qa-flows"
+rm "$H/.codex/skills/qa-flows"
+check "size: a missing Codex load path fails" "! installed_size claude > '$T/size-codex-link' && grep -q 'missing or different managed skill at .*/.codex/skills/qa-flows/SKILL.md' '$T/size-codex-link'"
+ln -s "$H/.agents/skills/qa-flows" "$H/.codex/skills/qa-flows"
+ln -sfn "$T/oversized-skill" "$H/.claude/skills/qa-flows"
+check "size: a different Claude load path fails" "! installed_size codex > '$T/size-claude-link' && grep -q 'missing or different managed skill at .*/.claude/skills/qa-flows/SKILL.md' '$T/size-claude-link'"
+ln -sfn "$H/.agents/skills/qa-flows" "$H/.claude/skills/qa-flows"
+mv "$H/.claude/skills" "$T/claude-skills-saved"; mv "$H/.claude/CLAUDE.md" "$T/claude-rules-saved"
+check "size: an incomplete tool configuration fails" "! installed_size codex > '$T/size-incomplete' && grep -q 'missing rule file .*/.claude/CLAUDE.md' '$T/size-incomplete' && grep -q 'missing or different managed skill at .*/.claude/skills/qa-flows/SKILL.md' '$T/size-incomplete'"
+mv "$T/claude-skills-saved" "$H/.claude/skills"; mv "$T/claude-rules-saved" "$H/.claude/CLAUDE.md"
+check "size: the source package ignores unrelated installed rules" "HOME='$SZ/home' bash '$HERE/skills/learn/scripts/size.sh' --source >/dev/null"
+mkdir -p "$T/empty-skills"
+check "size: a partial source package fails the manifest check" "! HOME='$T/nohome' SKILLS_DIR='$T/empty-skills' bash '$HERE/skills/learn/scripts/size.sh' --source > '$T/size-source-missing' && grep -q 'missing managed skill qa-flows' '$T/size-source-missing'"
 inst --uninstall
+check "uninstall: process skill links removed from all three locations" "[ ! -L '$H/.agents/skills/processes' ] && [ ! -L '$H/.claude/skills/processes' ] && [ ! -L '$H/.codex/skills/processes' ]"
 check "uninstall: links, block and our hooks removed, user content kept" "[ ! -e '$H/.agents/skills/ship' ] && ! grep -q 'agent-harness:start' '$H/.claude/CLAUDE.md' && grep -q 'my own rules' '$H/.claude/CLAUDE.md' && ! grep -q 'done-check' '$H/.claude/settings.json' && grep -q 'my-own-hook.sh' '$H/.claude/settings.json'"
 
 echo; echo "$pass passed, $fail failed"; [ "$fail" -eq 0 ]

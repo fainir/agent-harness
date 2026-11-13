@@ -5,7 +5,7 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 AGENTS_DIR="$HOME/.agents"; SKILLS="$AGENTS_DIR/skills"; HOOKS="$AGENTS_DIR/hooks"
-SKILL_NAMES="ship production-ready product-spec ux-ui-review qa-flows release-gates owner-actions run-company portfolio hire learn workspace"
+SKILL_NAMES="$(cat "$HERE/skills/learn/scripts/managed-skills.txt")"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 MODE="${1:-install}"
 
@@ -74,9 +74,11 @@ link() {  # link $2 -> $1, backing up anything else already there
 
 if [ "$MODE" = "--uninstall" ]; then
   for s in $SKILL_NAMES; do
-    for d in "$SKILLS" "$HOME/.claude/skills" "$HOME/.codex/skills"; do
-      [ -L "$d/$s" ] && rm "$d/$s"
+    [ -L "$SKILLS/$s" ] && [ "$(readlink "$SKILLS/$s")" = "$HERE/skills/$s" ] || continue
+    for d in "$HOME/.claude/skills" "$HOME/.codex/skills"; do
+      [ -L "$d/$s" ] && [ "$(readlink "$d/$s")" = "$SKILLS/$s" ] && rm "$d/$s"
     done
+    rm "$SKILLS/$s"
   done
   [ -L "$HOOKS" ] && rm "$HOOKS"
   [ -f "$HOME/.claude/CLAUDE.md" ] && rules_block "$HOME/.claude/CLAUDE.md" remove
