@@ -369,25 +369,30 @@ def cmd_plan(d):
         return 1
     entries = list(iter_ledger_rows(d))
     rows = ledger_rows(entries)
-    due = due_list(model)
+    due = {pr['id'].lower(): '  due: %s %s | runner: %s' % (pr['id'], pr['name'], pr['runner'])
+           for pr, _ in due_list(model)}
     clash = {(a, b) for a, b, _ in overlaps(model['lanes'])}
     for ln in model['lanes']:
         words = [w.strip().lower() for w in re.split(r'[,;]| and ', ln['covers']) if w.strip()]
-        mine = [pr for pr, _ in due if pr['id'].lower() in [re.sub(r'\W', '', w) for w in ln['covers'].lower().split()]]
+        covered = {re.sub(r'\W', '', w) for w in ln['covers'].lower().split()}
+        mine = [due.pop(pid) for pid in list(due) if pid in covered]
         cand = [(k, v) for k, v in rows.items() if v[0] in OPEN and any(w.split()[0] in (v[1] or '').lower() for w in words if w.split())]
         try:
             wip = int(re.sub(r'\D', '', ln['wip']) or 1)
         except ValueError:
             wip = 1
         print('%s (%s, WIP %d, owns %s)%s' % (ln['lane'], ln['runner'], wip, ln['owns'] or '-', ' waits on ' + ln['waits'] if ln['waits'] not in ('', '-') else ''))
-        for pr in mine:
-            print('  due: %s %s' % (pr['id'], pr['name']))
+        for line in mine:
+            print(line)
         for k, v in cand[:wip + 2]:
             print('  row: %s %s (%s)' % (k, v[2][:90], v[0]))
         if not mine and not cand:
             print('  nothing open')
     free = [ln['lane'] for ln in model['lanes'] if ln['waits'] in ('', '-')]
     print('parallel now: ' + (', '.join(free) or 'none') + ('' if not clash else '; not together: ' + ', '.join('%s+%s' % c for c in sorted(clash))))
+    if due:
+        print('Due processes outside lanes:')
+        print('\n'.join(due.values()))
     reviews = []
     current = now()
     for ledger, row_id, status, _, action, deadline in entries:

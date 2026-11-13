@@ -175,6 +175,26 @@ class CheckDueMarkPlan(Base):
         self.assertNotIn('P1 Checkout', out)  # verified rows are not work
         self.assertIn('parallel now: A build, B growth, C ops', out)
 
+    def test_plan_lists_each_due_process_once_with_its_runner(self):
+        extra = (
+            '| P4 | Weekly growth review | weekly sun | session | money/ledger.md | recorded | 2026-10-25 09:00 | ok |\n'
+            '| P5 | Recheck after approval | on approval | owner | money/ledger.md | recorded | - | new |\n'
+        )
+        self.write(GOOD.replace('\n## Lanes', extra + '\n## Lanes')
+                   .replace('support, money rows, P3', 'support, money rows, P2, P3'))
+        _, due = run(P.cmd_due, self.d)
+        code, out = run(P.cmd_plan, self.d)
+        self.assertEqual(code, 0)
+        due_ids = [line.split()[0] for line in due.splitlines()]
+        self.assertEqual(due_ids, ['P1', 'P2', 'P4'])
+        plan_ids = [line.split()[1] for line in out.splitlines() if line.startswith('  due: ')]
+        self.assertCountEqual(plan_ids, due_ids)
+        growth, rest = out.split('B growth', 1)[1].split('C ops', 1)
+        self.assertIn('  due: P2 Outreach | runner: task:acme-outreach', growth)
+        self.assertNotIn('  due: P2', rest)
+        unassigned = out.split('Due processes outside lanes:', 1)[1]
+        self.assertIn('  due: P4 Weekly growth review | runner: session', unassigned)
+
     def test_plan_lists_dated_result_reviews_separately_from_work(self):
         self.write(GOOD.replace('every run | session', 'every run | loop'))
         fixture = os.path.join(self.d, 'COMPANY.md')
