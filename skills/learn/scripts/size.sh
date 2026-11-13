@@ -73,6 +73,11 @@ audit_tool() {
     loaded="$root/skills/$n/SKILL.md"
     if ! cmp -s "$S/$n/SKILL.md" "$loaded"; then
       over=1; printf '%-5s %4s/%-4s %s\n' OVER 0 1 "missing or different managed skill at $loaded"
+      continue
+    fi
+    if [ ! "$S/$n" -ef "$root/skills/$n" ] &&
+      ! diff -qr -x __pycache__ -x .DS_Store "$S/$n" "$root/skills/$n" >/dev/null; then
+      over=1; printf '%-5s %4s/%-4s %s\n' OVER 0 1 "managed skill files differ at $root/skills/$n"
     fi
   done
 }
