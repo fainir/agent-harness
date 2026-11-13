@@ -84,7 +84,7 @@ Other agents: point them at `~/.agents/skills` and paste `rules/harness.md` into
 
 ## Contributing
 
-Run `bash tests/test.sh` before a pull request. Keep the harness small: `learn/scripts/size.sh` enforces a size budget, and a change that grows it must pay for itself.
+Run `bash tests/test.sh` before a pull request. `skills/learn/scripts/size.sh` checks the installed Agent Harness skills, both tools' rule files, and the copies they load. Pass `--all` to audit other installed skills too. Run `bash skills/learn/scripts/size.sh --source` to check the source package.
 
 MIT licensed.
 
