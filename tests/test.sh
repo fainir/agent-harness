@@ -211,6 +211,39 @@ for engine in claude codex; do
   check "run.sh: $engine still defers on a fresh operator file under .workspace" "[ \"\$(wc -l < '$IG/calls' | tr -d ' ')\" = $((before + 1)) ] && tail -1 '$IG/co/.runtime/runs/summary.log' | grep -q 'busy: .workspace/notes.md'"
 done
 
+# A failed model run must retry even when the inputs are unchanged.
+for runner in claude codex; do
+  retry="$T/retry-$runner"
+  mkdir -p "$retry/bin"
+  printf '| G1 | growth | Check sales | Orders | me | waiting | - | - |\n' > "$retry/COMPANY.md"
+  printf '#!/bin/sh\nprintf "same signals\\n"\n' > "$retry/signals.sh"
+  cat > "$retry/bin/$runner" <<'SH'
+#!/bin/sh
+echo called >> calls
+if [ -f hang ]; then
+  trap 'echo terminated >> calls; exit 0' TERM
+  while :; do sleep 0.1; done
+fi
+test -f recovered || exit 1
+SH
+  chmod +x "$retry/signals.sh" "$retry/bin/$runner"
+  retry_run() {
+    PATH="$retry/bin:$PATH" CLAUDE_BIN="$retry/bin/$runner" RUNNER="$runner" TIMEOUT="${TIMEOUT:-30}" BUSY_MIN=0 \
+      bash "$HERE/skills/run-company/scripts/run.sh" "$retry" >/dev/null 2>&1
+  }
+  retry_run; retry_status=$?
+  check "run.sh ($runner): a failed first run has no idle signature" "[ '$retry_status' = 1 ] && [ ! -e '$retry/.runtime/idle.sig' ]"
+  touch "$retry/recovered"; retry_run; retry_run
+  check "run.sh ($runner): retries unchanged signals once, then idles after recovery" "[ -s '$retry/.runtime/idle.sig' ] && [ \"\$(wc -l < '$retry/calls' | tr -d ' ')\" = 2 ]"
+  rm "$retry/recovered"; FORCE=1 retry_run; retry_status=$?
+  touch "$retry/recovered"; retry_run
+  check "run.sh ($runner): a forced failure invalidates an earlier successful signature" "[ '$retry_status' = 1 ] && [ \"\$(wc -l < '$retry/calls' | tr -d ' ')\" = 4 ]"
+  touch "$retry/hang"; TIMEOUT=1 FORCE=1 retry_run; retry_status=$?
+  check "run.sh ($runner): a watchdog timeout is a failure even after a graceful exit" "[ '$retry_status' = 124 ] && grep -qx terminated '$retry/calls' && [ ! -e '$retry/.runtime/idle.sig' ]"
+  rm "$retry/hang"; retry_run
+  check "run.sh ($runner): retries unchanged signals after the watchdog timeout" "[ \"\$(grep -c '^called$' '$retry/calls')\" = 6 ]"
+done
+
 # 6c. per-project learning and cross-project promotion
 PN="$T/pn"; mkdir -p "$PN/a/sub" "$PN/b"; printf '# a\n\n## Rules\n\n- keep it small\n' > "$PN/a/AGENTS.md"; (cd "$PN/b" && git init -q)
 bash "$HERE/skills/learn/scripts/project-note.sh" "Node 24 rejects node --test tests/; pass a glob" "$PN/a/sub" >/dev/null

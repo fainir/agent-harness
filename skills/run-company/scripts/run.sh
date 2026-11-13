@@ -22,7 +22,7 @@ done
 mkdir -p .runtime/runs; lock=.runtime/run.lock; LOCK_MIN=$(( TIMEOUT / 60 )); [ "$LOCK_MIN" -gt 0 ] || LOCK_MIN=1
 # Idle gate (opt-in: the folder has an executable signals.sh printing its outside state, such as store health and
 # order or message counts): with no buildable row and the same ledgers, OWNER.md, git HEAD and signals as after the
-# last model run, skip the model if no calendar process for this runner is due. A real run still happens at least
+# last successful model run, skip the model if no calendar process for this runner is due. A real run still happens at least
 # once a day (FORCE=1 forces one).
 signature() { { cat "${ledgers[@]}" OWNER.md 2>/dev/null; git rev-parse HEAD 2>/dev/null; ./signals.sh 2>/dev/null; } | cksum | cut -d' ' -f1; }
 has_open_rows() {
@@ -74,15 +74,32 @@ if [ -n "$busy" ]; then
 fi
 if [ -e "$lock" ] && [ -z "$(find "$lock" -mmin +"$LOCK_MIN" 2>/dev/null)" ]; then echo "busy: $lock is fresh, another run is on"; exit 0; fi
 STAMP="$(date +%Y%m%d-%H%M)"; log=".runtime/runs/$STAMP.log"; echo "$STAMP $$" > "$lock"
+# Starting a new run makes the old success stale, even if this run is interrupted.
+if [ "$gate" = 1 ] && ! rm -f .runtime/idle.sig; then rm -f "$lock"; exit 1; fi
 (
   if [ "$RUNNER" = codex ]; then exec codex exec $CODEX_FLAGS "$PROMPT"; else exec claude -p "$PROMPT" $CLAUDE_FLAGS; fi
 ) > "$log" 2>&1 < /dev/null &
 pid=$!
-( sleep "$TIMEOUT"; kids=$(pgrep -P "$pid" 2>/dev/null); kill "$pid" 2>/dev/null && echo "[run] killed after ${TIMEOUT}s" >> "$log"; [ -n "$kids" ] && kill $kids 2>/dev/null ) > /dev/null 2>&1 < /dev/null &
+timeout_flag=".runtime/run-timeout.$$.$pid"
+(
+  sleep "$TIMEOUT" || exit 0
+  kill -0 "$pid" 2>/dev/null || exit 0
+  kids=$(pgrep -P "$pid" 2>/dev/null)
+  # Record the deadline before signaling: the runner can catch TERM and exit zero.
+  : > "$timeout_flag"
+  kill "$pid" 2>/dev/null
+  [ -n "$kids" ] && kill $kids 2>/dev/null
+) > /dev/null 2>&1 < /dev/null &
 dog=$!; disown "$dog" 2>/dev/null
 { wait "$pid"; rc=$?; } 2>/dev/null
-pkill -P "$dog" 2>/dev/null; kill "$dog" 2>/dev/null; rm -f "$lock"
-[ "$gate" = 1 ] && signature > .runtime/idle.sig
+pkill -P "$dog" 2>/dev/null; kill "$dog" 2>/dev/null
+if [ -f "$timeout_flag" ]; then
+  rm -f "$timeout_flag"
+  echo "[run] timed out after ${TIMEOUT}s" >> "$log"
+  [ "$rc" = 0 ] && rc=124
+fi
+[ "$gate" = 1 ] && [ "$rc" = 0 ] && signature > .runtime/idle.sig
+rm -f "$lock"
 printf '%s %s %s exit %s %s\n' "$STAMP" "$ledger" "$RUNNER" "$rc" "$log" >> .runtime/runs/summary.log
 ls -t .runtime/runs/*.log 2>/dev/null | tail -n +31 | xargs rm -f 2>/dev/null
 echo "== $ledger run $STAMP ($RUNNER, exit $rc) =="; tail -n 8 "$log"
