@@ -28,7 +28,7 @@ Row rule: every row says what it serves (a KPI or a GOAL.md line). A row that se
 3. OWNER.md: standing approvals (owner-actions skill, "Standing approvals"). Caps start at 0. Propose them yourself from GOAL.md (monthly cap, per-item cap, the accounts and channels you will need) and make that proposal the first turn's single NEEDS YOU; a yes writes them into OWNER.md. Until then, do only free actions.
 4. Products: ship phase 0 in each product folder (existing code or a new idea). Distill old plans, status files and notes into the ledgers once, then stop appending to them.
 5. First audit, once: numbers from real sources, every channel and account that exists, every open customer thread, every cost. Everything found becomes a row or a Decision line.
-6. Schedule the loop so it runs with no chat and no app open: `bash ~/.agents/skills/run-company/scripts/schedule.sh . 3` (headless `continue` every 3 hours through launchd or cron, `scripts/run.sh`, log in `.runtime/launchd.log`), plus the daily heartbeat (section 6). A Stop hook warns while a ledger has no schedule.
+6. Schedule the loop so it runs with no chat and no app open: `bash ~/.agents/skills/run-company/scripts/schedule.sh . 3` (headless `continue` every 3 hours through launchd or cron, `scripts/run.sh`). The installer prints the log path. Also set the daily heartbeat (section 6). A Stop hook warns while a ledger has no schedule.
 
 ## 3. The loop (every run)
 

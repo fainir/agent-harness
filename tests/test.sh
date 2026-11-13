@@ -164,6 +164,43 @@ check "run.sh: a file changed by a working session keeps the scheduled run out o
 BUSY_MIN=30 igrun
 check "run.sh: once the session's edit is older than the last check, the scheduled run goes on" "[ \"\$(wc -l < '$IG/calls' | tr -d ' ')\" = 5 ]"
 
+# The job manager opens stdout before starting Bash, so use a writable home log directory.
+SC="$T/scheduler"; mkdir -p "$SC/bin" "$SC/home/Documents/scheduled-claude" "$SC/home/Documents/scheduled-codex"
+SC="$(cd "$SC" && pwd -P)"
+touch "$SC/home/Documents/scheduled-claude/COMPANY.md" "$SC/home/Documents/scheduled-codex/COMPANY.md"
+printf '#!/bin/sh\nprintf "%%s\\n" "${SCHEDULE_FIXTURE_OS:-Darwin}"\n' > "$SC/bin/uname"
+printf '#!/bin/sh\nexit 0\n' > "$SC/bin/launchctl"
+printf '#!/bin/sh\ncase "$1" in -l) echo "0 0 * * * /bin/true";; -) cat > "$SCHEDULE_FIXTURE_CRON";; *) exit 2;; esac\n' > "$SC/bin/crontab"
+cp "$SC/bin/launchctl" "$SC/bin/claude"; cp "$SC/bin/launchctl" "$SC/bin/codex"
+chmod +x "$SC/bin/"*
+check_schedule() {
+  python3 - "$@" <<'PY'
+import pathlib
+import plistlib
+import sys
+
+home = pathlib.Path(sys.argv[1])
+runner, project, output = sys.argv[2:]
+label = 'com.harness.scheduled-' + runner
+plist = home / 'Library/LaunchAgents' / (label + '.plist')
+job = plistlib.loads(plist.read_bytes())
+log = home / 'Library/Logs' / (label + '.log')
+assert log.parent.is_dir(), log.parent
+assert job['StandardOutPath'] == job['StandardErrorPath'] == str(log)
+assert job['StartInterval'] == 10800
+assert job['EnvironmentVariables']['RUNNER'] == runner
+assert job['ProgramArguments'][-1] == project
+assert str(log) in pathlib.Path(output).read_text()
+PY
+}
+for runner in claude codex; do
+  project="$SC/home/Documents/scheduled-$runner"
+  HOME="$SC/home" PATH="$SC/bin:$PATH" RUNNER="$runner" bash "$HERE/skills/run-company/scripts/schedule.sh" "$project" 3 > "$SC/$runner.log"
+  check "schedule.sh: $runner launchd logs are outside the project" "check_schedule '$SC/home' '$runner' '$project' '$SC/$runner.log'"
+done
+HOME="$SC/home" PATH="$SC/bin:$PATH" RUNNER=codex SCHEDULE_FIXTURE_OS=Linux SCHEDULE_FIXTURE_CRON="$SC/crontab" bash "$HERE/skills/run-company/scripts/schedule.sh" "$project" 3 >/dev/null
+check "schedule.sh: cron keeps the project-local output path and unrelated jobs" "grep -Fq -- '>> $project/.runtime/launchd.log 2>&1' '$SC/crontab' && grep -Fxq '0 0 * * * /bin/true' '$SC/crontab'"
+
 # 6c. per-project learning and cross-project promotion
 PN="$T/pn"; mkdir -p "$PN/a/sub" "$PN/b"; printf '# a\n\n## Rules\n\n- keep it small\n' > "$PN/a/AGENTS.md"; (cd "$PN/b" && git init -q)
 bash "$HERE/skills/learn/scripts/project-note.sh" "Node 24 rejects node --test tests/; pass a glob" "$PN/a/sub" >/dev/null
