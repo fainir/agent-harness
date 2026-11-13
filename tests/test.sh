@@ -225,5 +225,6 @@ check "install: codex hooks.json written" "grep -q -- '--judge codex' '$H/.codex
 check "install: a no-progress Stop loop ends after 2 blocks (Claude settings env)" "python3 -I -c 'import json,sys; sys.exit(0 if json.load(open(sys.argv[1])).get(\"env\", {}).get(\"CLAUDE_CODE_STOP_HOOK_BLOCK_CAP\") == \"2\" else 1)' '$H/.claude/settings.json'"
 inst --uninstall
 check "uninstall: links, block and our hooks removed, user content kept" "[ ! -e '$H/.agents/skills/ship' ] && ! grep -q 'agent-harness:start' '$H/.claude/CLAUDE.md' && grep -q 'my own rules' '$H/.claude/CLAUDE.md' && ! grep -q 'done-check' '$H/.claude/settings.json' && grep -q 'my-own-hook.sh' '$H/.claude/settings.json'"
+check "installer: isolated CLI help, link restoration and preview regression tests" "python3 -I '$HERE/tests/test_install.py'"
 
 echo; echo "$pass passed, $fail failed"; [ "$fail" -eq 0 ]
