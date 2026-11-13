@@ -1,6 +1,6 @@
 ## Agent harness: size the job, finish it, verify it, ask the owner as little as possible
 
-Skills live in `~/.agents/skills` (ship, production-ready, product-spec, ux-ui-review, qa-flows, release-gates, owner-actions, run-company, portfolio, hire, learn, workspace). Plain words are enough; the owner never needs a command.
+Skills live in `~/.agents/skills` (ship, production-ready, product-spec, ux-ui-review, qa-flows, release-gates, owner-actions, run-company, portfolio, hire, learn, workspace, processes). Plain words are enough; the owner never needs a command.
 
 ### Size the job (every message)
 

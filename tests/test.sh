@@ -213,17 +213,30 @@ perl -pi -e 's/\| todo \|/| building (me) |/' "$WS/COMPANY.md" && wsgen "$WS" >/
 check "workspace: --diff prints only what a republish changes, not the publish wrapper" "out=\$(wsgen --diff '$T/ws-pub.html' '$WS/.workspace/artifact.html'); echo \"\$out\" | grep -q '^rows: 1 new or changed' && ! echo \"\$out\" | grep -q '^template' && [ \"\$(wsgen --diff '$WS/.workspace/artifact.html' '$WS/.workspace/artifact.html')\" = 'no changes since the published page' ] && ! wsgen --diff '$T/no-such-page.html' '$WS/.workspace/artifact.html' 2>&1 | grep -q 'no workspace data'"
 
 # 7. install, reinstall, uninstall in a throwaway HOME
+check "processes: plan surfaces dated result reviews separately from work" "python3 -I -B '$HERE/skills/processes/scripts/test_processes.py'"
 H="$T/home"; mkdir -p "$H/.claude" "$H/.codex"; printf '# my own rules\n' > "$H/.claude/CLAUDE.md"
 printf '{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"my-own-hook.sh"}]}]}}\n' > "$H/.claude/settings.json"
 inst() { HOME="$H" bash "$HERE/install.sh" "$@" >/dev/null 2>&1; }
+mkdir -p "$H/.agents/skills/processes" "$H/.claude/skills" "$H/.codex/skills"
+ln -s "$H/.agents/skills/processes" "$H/.claude/skills/processes"
+ln -s "$H/.agents/skills/processes" "$H/.codex/skills/processes"
+inst --uninstall
+check "uninstall: an existing standalone process skill and aliases are retained" "[ -d '$H/.agents/skills/processes' ] && [ -L '$H/.claude/skills/processes' ] && [ -L '$H/.codex/skills/processes' ]"
+rm "$H/.claude/skills/processes" "$H/.codex/skills/processes"
+rmdir "$H/.agents/skills/processes"
 inst; inst
 check "install: skills linked for every tool" "[ -L '$H/.agents/skills/ship' ] && [ -L '$H/.claude/skills/learn' ] && [ -L '$H/.codex/skills/run-company' ] && [ -L '$H/.agents/skills/workspace' ]"
+PLAN="$T/process-plan"; mkdir -p "$PLAN"
+printf '# Test processes\n' > "$PLAN/PROCESSES.md"
+printf '| ID | Track | Action | Status | Due |\n|---|---|---|---|---|\n| G2 | growth | Read the test result | waiting | 2000-01-01 |\n' > "$PLAN/COMPANY.md"
+check "install: both tools can run the packaged process planner" "HOME='$H' python3 -I '$H/.codex/skills/processes/scripts/processes.py' plan '$PLAN' | grep -q '^  G2 2000-01-01 | COMPANY.md | Read the test result$' && HOME='$H' python3 -I '$H/.claude/skills/processes/scripts/processes.py' plan '$PLAN' | grep -q '^  G2 2000-01-01 | COMPANY.md | Read the test result$'"
 check "install: one rules block after two installs" "[ \"\$(grep -c 'agent-harness:start' '$H/.claude/CLAUDE.md')\" = 1 ] && grep -q 'my own rules' '$H/.claude/CLAUDE.md'"
 check "install: hooks added once, user hooks kept" "python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1]))[\"hooks\"]; s=json.dumps(d); sys.exit(0 if s.count(\"done-check.py\")==1 and s.count(\"continue-ledger.sh\")==1 and \"my-own-hook.sh\" in s and \"UserPromptSubmit\" in d else 1)' '$H/.claude/settings.json'"
 check "install: zsh-guard runs before Bash calls only (matcher Bash), and not for Codex" "python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1]))[\"hooks\"][\"PreToolUse\"]; g=[x for x in d if any(\"zsh-guard.sh\" in c[\"command\"] for c in x[\"hooks\"])]; sys.exit(0 if len(g)==1 and g[0].get(\"matcher\")==\"Bash\" else 1)' '$H/.claude/settings.json' && ! grep -q zsh-guard '$H/.codex/hooks.json'"
 check "install: codex hooks.json written" "grep -q -- '--judge codex' '$H/.codex/hooks.json'"
 check "install: a no-progress Stop loop ends after 2 blocks (Claude settings env)" "python3 -I -c 'import json,sys; sys.exit(0 if json.load(open(sys.argv[1])).get(\"env\", {}).get(\"CLAUDE_CODE_STOP_HOOK_BLOCK_CAP\") == \"2\" else 1)' '$H/.claude/settings.json'"
 inst --uninstall
+check "uninstall: process skill links removed from all three locations" "[ ! -L '$H/.agents/skills/processes' ] && [ ! -L '$H/.claude/skills/processes' ] && [ ! -L '$H/.codex/skills/processes' ]"
 check "uninstall: links, block and our hooks removed, user content kept" "[ ! -e '$H/.agents/skills/ship' ] && ! grep -q 'agent-harness:start' '$H/.claude/CLAUDE.md' && grep -q 'my own rules' '$H/.claude/CLAUDE.md' && ! grep -q 'done-check' '$H/.claude/settings.json' && grep -q 'my-own-hook.sh' '$H/.claude/settings.json'"
 
 echo; echo "$pass passed, $fail failed"; [ "$fail" -eq 0 ]
