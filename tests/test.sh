@@ -310,6 +310,33 @@ PLAN="$T/process-plan"; mkdir -p "$PLAN"
 printf '# Test processes\n' > "$PLAN/PROCESSES.md"
 printf '| ID | Track | Action | Status | Due |\n|---|---|---|---|---|\n| G2 | growth | Read the test result | waiting | 2000-01-01 |\n' > "$PLAN/COMPANY.md"
 check "install: both tools can run the packaged process planner" "HOME='$H' python3 -I '$H/.codex/skills/processes/scripts/processes.py' plan '$PLAN' | grep -q '^  G2 2000-01-01 | COMPANY.md | Read the test result$' && HOME='$H' python3 -I '$H/.claude/skills/processes/scripts/processes.py' plan '$PLAN' | grep -q '^  G2 2000-01-01 | COMPANY.md | Read the test result$'"
+for runner in claude codex; do
+  close="$T/close-$runner"
+  mkdir -p "$close/bin"
+  printf '#!/bin/sh\nprintf "run\\n" >> calls\n' > "$close/bin/$runner"
+  printf '#!/bin/sh\nprintf "unchanged\\n"\n' > "$close/signals.sh"
+  chmod +x "$close/bin/$runner" "$close/signals.sh"
+  printf '| ID | Status |\n|---|---|\n| M3 | waiting |\n' > "$close/COMPANY.md"
+  cat > "$close/PROCESSES.md" <<'MD'
+## Processes
+
+| ID | Process | When | Runner | How | Done when | Last run | Health |
+|---|---|---|---|---|---|---|---|
+| P1 | Coordinator | every 3h | loop | run.sh | run | 2026-11-29 00:00 | ok |
+| P2 | Numbers | every run | loop | signals.sh | read | 2026-11-30 20:00 | ok |
+| P10 | Reconcile month | monthly 1 | loop | money/ledger.md | reconciled | 2026-11-01 08:00 | ok |
+| P13 | Browser work | daily 10:20 | task:browser | Chrome | checked | 2026-11-29 10:20 | ok |
+MD
+  close_run() {
+    HOME="$H" PROCESSES_NOW="$1" PATH="$close/bin:$PATH" RUNNER="$runner" TIMEOUT=30 BUSY_MIN=0 \
+      bash "$H/.$runner/skills/run-company/scripts/run.sh" "$close"
+  }
+  close_run '2026-11-30 23:59' > "$close/first"
+  check "install: $runner idles before the due month close even with a due browser task" "grep -q 'exit 0' '$close/first' && close_run '2026-11-30 23:59' | grep -q '^idle:'"
+  check "install: $runner wakes on unchanged signals when the packaged planner finds a due close" "close_run '2026-12-01 00:01' | grep -q 'exit 0' && close_run '2026-12-01 00:02' | grep -q 'exit 0' && [ \"\$(wc -l < '$close/calls' | tr -d ' ')\" = 3 ]"
+  PROCESSES_NOW='2026-12-01 00:03' python3 -I "$H/.$runner/skills/processes/scripts/processes.py" mark "$close" P10 ok > "$close/marked"
+  check "install: $runner resumes idle after the planner records the close" "grep -q '^P10 marked ok' '$close/marked' && close_run '2026-12-01 00:04' | grep -q '^idle:' && [ \"\$(wc -l < '$close/calls' | tr -d ' ')\" = 3 ]"
+done
 check "install: one rules block after two installs" "[ \"\$(grep -c 'agent-harness:start' '$H/.claude/CLAUDE.md')\" = 1 ] && grep -q 'my own rules' '$H/.claude/CLAUDE.md'"
 check "install: hooks added once, user hooks kept" "python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1]))[\"hooks\"]; s=json.dumps(d); sys.exit(0 if s.count(\"done-check.py\")==1 and s.count(\"continue-ledger.sh\")==1 and \"my-own-hook.sh\" in s and \"UserPromptSubmit\" in d else 1)' '$H/.claude/settings.json'"
 check "install: zsh-guard runs before Bash calls only (matcher Bash), and not for Codex" "python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1]))[\"hooks\"][\"PreToolUse\"]; g=[x for x in d if any(\"zsh-guard.sh\" in c[\"command\"] for c in x[\"hooks\"])]; sys.exit(0 if len(g)==1 and g[0].get(\"matcher\")==\"Bash\" else 1)' '$H/.claude/settings.json' && ! grep -q zsh-guard '$H/.codex/hooks.json'"
