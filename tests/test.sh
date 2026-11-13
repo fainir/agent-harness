@@ -164,6 +164,49 @@ check "run.sh: a file changed by a working session keeps the scheduled run out o
 BUSY_MIN=30 igrun
 check "run.sh: once the session's edit is older than the last check, the scheduled run goes on" "[ \"\$(wc -l < '$IG/calls' | tr -d ' ')\" = 5 ]"
 
+# Linux schedule: only a missing crontab is an empty table. A failed read must never replace existing jobs.
+SC="$T/cron"; mkdir -p "$SC/bin" "$SC/project"
+touch "$SC/project/COMPANY.md"
+printf '#!/bin/sh\nprintf "Linux\n"\n' > "$SC/bin/uname"
+printf '#!/bin/sh\nexit 0\n' > "$SC/bin/claude"
+cp "$SC/bin/claude" "$SC/bin/codex"
+cat > "$SC/bin/crontab" <<'EOF'
+#!/bin/sh
+case "$1" in
+  -l)
+    case "${CRON_FIXTURE_ERROR:-}" in
+      denied) echo 'crontab: permission denied' >&2; exit 1 ;;
+      mixed) printf 'no crontab for %s\ncrontab: permission denied\n' "$(id -run)" >&2; exit 1 ;;
+    esac
+    if [ ! -f "$CRON_FIXTURE_TAB" ]; then
+      if [ "${CRON_FIXTURE_BUSYBOX:-}" ]; then
+        printf "crontab: can't open '%s': No such file or directory\n" "$(id -run)" >&2
+      else
+        printf 'crontab: no crontab for %s\n' "$(id -run)" >&2
+      fi
+      exit 1
+    fi
+    cat "$CRON_FIXTURE_TAB" ;;
+  -) if [ "${CRON_FIXTURE_LOST_WRITE:-}" ]; then cat >/dev/null; else cat > "$CRON_FIXTURE_TAB"; fi ;;
+  *) exit 2 ;;
+esac
+EOF
+chmod +x "$SC/bin/"*
+schedule_cron() {
+  PATH="$SC/bin:$PATH" CRON_FIXTURE_TAB="$SC/table" bash "$HERE/skills/run-company/scripts/schedule.sh" "$@"
+}
+check "schedule.sh: removing an absent cron entry needs no write" "schedule_cron --remove '$SC/project' >/dev/null && [ ! -e '$SC/table' ]"
+check "schedule.sh: first Linux schedule creates the missing crontab" "RUNNER=claude schedule_cron '$SC/project' 3 >/dev/null && grep -q '^0 \*/3 .* RUNNER=claude ' '$SC/table'"
+rm -f "$SC/table"
+check "schedule.sh: first BusyBox schedule accepts only the missing user table" "CRON_FIXTURE_BUSYBOX=1 RUNNER=claude schedule_cron '$SC/project' 3 >/dev/null && grep -q '^0 \*/3 .* RUNNER=claude ' '$SC/table'"
+check "schedule.sh: changing the sole Linux entry keeps exactly one job" "RUNNER=codex schedule_cron '$SC/project' 4 >/dev/null && grep -q '^0 \*/4 .* RUNNER=codex ' '$SC/table' && [ \"\$(wc -l < '$SC/table' | tr -d ' ')\" = 1 ]"
+check "schedule.sh: removing the only Linux entry succeeds" "schedule_cron --remove '$SC/project' >/dev/null && [ -f '$SC/table' ] && [ ! -s '$SC/table' ]"
+printf '0 0 * * * /bin/true\n0 1 * * * /bin/true # harness run.sh %s-backup\n' "$SC/project" > "$SC/expected"
+cp "$SC/expected" "$SC/table"
+check "schedule.sh: Linux schedule and removal preserve unrelated entries and path prefixes" "RUNNER=codex schedule_cron '$SC/project' 3 >/dev/null && schedule_cron --remove '$SC/project' >/dev/null && cmp -s '$SC/expected' '$SC/table'"
+check "schedule.sh: Linux cron read errors leave existing jobs intact" "! CRON_FIXTURE_ERROR=denied RUNNER=codex schedule_cron '$SC/project' 3 > '$SC/error' 2>&1 && ! CRON_FIXTURE_ERROR=mixed schedule_cron --remove '$SC/project' >> '$SC/error' 2>&1 && grep -q 'permission denied' '$SC/error' && cmp -s '$SC/expected' '$SC/table'"
+check "schedule.sh: Linux write must read back before reporting success" "! CRON_FIXTURE_LOST_WRITE=1 RUNNER=codex schedule_cron '$SC/project' 3 > '$SC/error' 2>&1 && grep -q 'did not retain' '$SC/error' && cmp -s '$SC/expected' '$SC/table'"
+
 # 6c. per-project learning and cross-project promotion
 PN="$T/pn"; mkdir -p "$PN/a/sub" "$PN/b"; printf '# a\n\n## Rules\n\n- keep it small\n' > "$PN/a/AGENTS.md"; (cd "$PN/b" && git init -q)
 bash "$HERE/skills/learn/scripts/project-note.sh" "Node 24 rejects node --test tests/; pass a glob" "$PN/a/sub" >/dev/null
