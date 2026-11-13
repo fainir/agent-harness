@@ -64,7 +64,10 @@ fi
 # minutes, after the last scheduled check. A second agent on the same checkout would collide with them; wait.
 BUSY_MIN="${BUSY_MIN:-30}"; busy=""; ref=""; [ -f .runtime/runs/summary.log ] && ref=.runtime/runs/summary.log
 if [ "$BUSY_MIN" -gt 0 ] && [ "${FORCE:-0}" != 1 ]; then  # BUSY_MIN=0 turns the check off (macOS find matches -mmin -0)
-  busy="$(find . \( -path ./.git -o -path ./.runtime -o -name node_modules \) -prune -o -type f -mmin -"$BUSY_MIN" ${ref:+-newer} ${ref:+"$ref"} -print 2>/dev/null | head -1)"
+  # The workspace renderer refreshes these files even when nobody is editing the project.
+  busy="$(find . \( -path ./.git -o -path ./.runtime -o -name node_modules \) -prune -o \
+    -type f ! -path ./.workspace/artifact.html ! -path ./.workspace/index.html ! -path ./.workspace/data.json \
+    -mmin -"$BUSY_MIN" ${ref:+-newer} ${ref:+"$ref"} -print 2>/dev/null | head -1)"
 fi
 if [ -n "$busy" ]; then
   echo "$(date +%Y%m%d-%H%M) $ledger busy: ${busy#./} changed in the last $BUSY_MIN min, a session is working here" >> .runtime/runs/summary.log; echo "busy: a session is working here"; exit 0

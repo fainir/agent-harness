@@ -196,6 +196,21 @@ for runner in claude codex; do
   check "run.sh $runner: a buildable release gate keeps the runner active" "[ \"\$(wc -l < '$IGM/calls' | tr -d ' ')\" = 8 ]"
 done
 
+# A dashboard refresh writes the same three generated files regardless of which runner is selected.
+cp "$IG/bin/claude" "$IG/bin/codex"
+for engine in claude codex; do
+  before=$(wc -l < "$IG/calls" | tr -d ' ')
+  sleep 1
+  mkdir -p "$IG/co/.workspace"
+  touch "$IG/co/.workspace/artifact.html" "$IG/co/.workspace/index.html" "$IG/co/.workspace/data.json"
+  RUNNER="$engine" BUSY_MIN=30 igrun
+  check "run.sh: $engine runs with a fresh generated dashboard" "[ \"\$(wc -l < '$IG/calls' | tr -d ' ')\" = $((before + 1)) ]"
+  sleep 1
+  printf '# operator notes\n' > "$IG/co/.workspace/notes.md"
+  RUNNER="$engine" BUSY_MIN=30 igrun
+  check "run.sh: $engine still defers on a fresh operator file under .workspace" "[ \"\$(wc -l < '$IG/calls' | tr -d ' ')\" = $((before + 1)) ] && tail -1 '$IG/co/.runtime/runs/summary.log' | grep -q 'busy: .workspace/notes.md'"
+done
+
 # 6c. per-project learning and cross-project promotion
 PN="$T/pn"; mkdir -p "$PN/a/sub" "$PN/b"; printf '# a\n\n## Rules\n\n- keep it small\n' > "$PN/a/AGENTS.md"; (cd "$PN/b" && git init -q)
 bash "$HERE/skills/learn/scripts/project-note.sh" "Node 24 rejects node --test tests/; pass a glob" "$PN/a/sub" >/dev/null
