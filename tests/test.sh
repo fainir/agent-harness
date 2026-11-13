@@ -63,6 +63,8 @@ check "done check: short promise in clean Git reaches the judge" "dc_reply 'I wi
 check "done check: contracted promise reaches the judge" "dc_reply 'I’ll run the tests next.' | grep -q '\"decision\": \"block\"'"
 check "done check: singular contracted going-to promise reaches the judge" "dc_reply \"I'm going to run the tests next.\" | grep -q '\"decision\": \"block\"'"
 check "done check: plural contracted going-to promise reaches the judge" "dc_reply 'We’re going to run the tests next.' | grep -q '\"decision\": \"block\"'"
+check "done check: short unfinished admission in clean Git reaches the judge" "dc_reply 'I did not finish the implementation.' | grep -q '\"decision\": \"block\"'"
+check "done check: contracted unfinished admission reaches the judge" "dc_reply 'I haven’t completed the implementation.' | grep -q '\"decision\": \"block\"'"
 check "done check: short completed check in clean Git skips the judge" "[ \"\$(dc_reply 'Ran pytest: 12 passed, exit 0.')\" = '{}' ]"
 
 # 5b. continue-ledger.sh: a focused session goes on while rows are open, with a no-progress guard
