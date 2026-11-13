@@ -29,7 +29,10 @@ NODE_DIR="$(dirname "$(command -v node 2>/dev/null || echo /usr/local/bin/node)"
 PATHS="$(dirname "$BIN"):$NODE_DIR:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin"
 mkdir -p "$DIR/.runtime"
 if [ "$(uname)" = Darwin ]; then
-  L="$(label_for "$DIR")"; P="$AGENTS/$L.plist"; mkdir -p "$AGENTS"
+  L="$(label_for "$DIR")"; P="$AGENTS/$L.plist"
+  # launchd opens these files before the job can access a project under Documents.
+  JOB_LOG="$HOME/Library/Logs/$L.log"
+  mkdir -p "$AGENTS" "$(dirname "$JOB_LOG")"
   cat > "$P" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -39,13 +42,13 @@ if [ "$(uname)" = Darwin ]; then
   <key>StartInterval</key><integer>$(( HOURS * 3600 ))</integer>
   <key>RunAtLoad</key><false/>
   <key>EnvironmentVariables</key><dict><key>PATH</key><string>$PATHS</string><key>RUNNER</key><string>$RUNNER</string><key>HOME</key><string>$HOME</string><key>TIMEOUT</key><string>${TIMEOUT:-2400}</string></dict>
-  <key>StandardOutPath</key><string>$DIR/.runtime/launchd.log</string>
-  <key>StandardErrorPath</key><string>$DIR/.runtime/launchd.log</string>
+  <key>StandardOutPath</key><string>$JOB_LOG</string>
+  <key>StandardErrorPath</key><string>$JOB_LOG</string>
 </dict></plist>
 EOF
   launchctl bootout "gui/$(id -u)/$L" 2>/dev/null || true
   launchctl bootstrap "gui/$(id -u)" "$P"
-  echo "scheduled $L: $RUNNER runs 'continue' in $DIR every ${HOURS}h, log $DIR/.runtime/launchd.log. Remove: schedule.sh --remove $DIR"
+  echo "scheduled $L: $RUNNER runs 'continue' in $DIR every ${HOURS}h, log $JOB_LOG. Remove: schedule.sh --remove $DIR"
 else
   line="0 */$HOURS * * * PATH=$PATHS RUNNER=$RUNNER TIMEOUT=${TIMEOUT:-2400} /bin/bash $RUN $DIR >> $DIR/.runtime/launchd.log 2>&1 # harness run.sh $DIR"
   (crontab -l 2>/dev/null | grep -v "harness run.sh $DIR"; echo "$line") | crontab -
