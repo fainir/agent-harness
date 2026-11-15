@@ -22,6 +22,7 @@ RUNNER_PREFIXES = ('task:', 'automation:', 'human:')
 STRATEGY_KEYS = ('Diagnosis', 'Guiding policy', 'Coherent actions', 'Feasible because', 'Next objective', 'Review by')
 DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
 OPEN = ('todo', 'building', 'defect', 'open', 'new')
+REVIEW = re.compile(r'review (.+) ([A-Z][A-Za-z]*\d+[a-z]?)')
 
 
 def now():
@@ -302,13 +303,32 @@ def cmd_init(d):
     return 0
 
 
-def due_list(model, runner=None, include_events=False):
+def ledger_deadlines(entries):
+    """Index the exact ledger and row. Only waiting rows can have a review deadline."""
+    return {(ledger, row_id): review_time(deadline) if status == 'waiting' else None
+            for ledger, row_id, status, _, _, deadline in entries}
+
+
+def process_cadence(pr, t, deadlines):
+    last = parse_time(pr['last'])
+    review = REVIEW.fullmatch(pr['when'])
+    if not review:
+        return cadence(pr['when'], last, t)
+    deadline = deadlines.get(review.groups())
+    if deadline is None or t < deadline:
+        return 'review', False, None
+    reviewed = last is not None and last >= deadline and pr['health'].lower() == 'ok'
+    return 'review', not reviewed, None
+
+
+def due_list(model, runner=None, include_events=False, entries=()):
     t, out = now(), []
+    deadlines = ledger_deadlines(entries)
     for pr in model['procs']:
         ok, parts = runner_ok(pr['runner'])
         if runner and not any(x == runner or (runner.endswith(':') and x.startswith(runner)) for x in parts):
             continue
-        kind, due, _ = cadence(pr['when'], parse_time(pr['last']), t)
+        kind, due, _ = process_cadence(pr, t, deadlines)
         if due or (include_events and kind == 'event'):
             out.append((pr, kind))
     return out
@@ -319,7 +339,7 @@ def cmd_due(d, runner=None, include_events=False):
     if not model:
         print('no PROCESSES.md in %s: run init' % d)
         return 1
-    rows = due_list(model, runner, include_events)
+    rows = due_list(model, runner, include_events, iter_ledger_rows(d))
     if not rows:
         print('nothing due' + (' for ' + runner if runner else ''))
         return 0
@@ -373,7 +393,7 @@ def cmd_plan(d):
         return 1
     entries = list(iter_ledger_rows(d))
     due = {pr['id'].lower(): '  due: %s %s | runner: %s' % (pr['id'], pr['name'], pr['runner'])
-           for pr, _ in due_list(model)}
+           for pr, _ in due_list(model, entries=entries)}
     clash = {(a, b) for a, b, _ in overlaps(model['lanes'])}
     for ln in model['lanes']:
         words = [w.strip().lower() for w in re.split(r'[,;]| and ', ln['covers']) if w.strip()]
@@ -427,7 +447,9 @@ def cmd_check(d):
     rb = parse_time(s.get('Review by', ''))
     if rb and rb < now():
         warns.append('strategy review overdue (Review by %s)' % rb.date())
-    rows = ledger_rows(iter_ledger_rows(d))
+    entries = list(iter_ledger_rows(d))
+    rows = ledger_rows(entries)
+    deadlines = ledger_deadlines(entries)
     for k in re.findall(r'\b([A-Z][A-Za-z]?\d{1,3}[a-z]?)\b', s.get('Coherent actions', '')):
         if k not in rows:
             warns.append('coherent action names %s, which is not a ledger row' % k)
@@ -452,7 +474,10 @@ def cmd_check(d):
                     warns.append('%s runs on loop, but no schedule runs this folder (run-company scripts/schedule.sh)' % pr['id'])
             if x.startswith('task:') and not os.path.exists(os.path.join(TASKS, x[5:], 'SKILL.md')):
                 warns.append('%s names desktop task %s, which does not exist' % (pr['id'], x[5:]))
-        kind, due, period = cadence(pr['when'], parse_time(pr['last']), t)
+        review = REVIEW.fullmatch(pr['when'])
+        if review and review.groups() not in deadlines:
+            fails.append('%s When references a missing ledger row: %s %s' % (pr['id'], *review.groups()))
+        kind, due, period = process_cadence(pr, t, deadlines)
         if kind == 'unknown' and pr['when'] != '(as scheduled)':
             warns.append('%s When "%s" is not a cadence this script reads (every run, hourly, every 3h, daily 16:30, weekly sun, monthly 1, on <event>)' % (pr['id'], pr['when']))
         last = parse_time(pr['last'])

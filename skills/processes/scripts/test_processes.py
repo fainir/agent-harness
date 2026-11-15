@@ -142,6 +142,51 @@ GOOD = """# Acme - how we work
 
 
 class CheckDueMarkPlan(Base):
+    def test_dated_review_uses_exact_ledger_row_time_runner_and_success(self):
+        self.write(GOOD.replace('\n## Lanes',
+                               '| P4 | Read order | review COMPANY.md S3 | loop | money/ledger.md | read | - | new |\n'
+                               '| P5 | Read browser | review COMPANY.md S4 | session | money/ledger.md | read | - | new |\n'
+                               '| P6 | Read owner | review COMPANY.md S5 | loop | money/ledger.md | read | - | new |\n'
+                               '\n## Lanes'))
+        fixture = os.path.join(self.d, 'COMPANY.md')
+        with open(fixture, 'a') as f:
+            f.write('| S3 | support | Read first order | Paid orders | me | waiting | 2026-11-04 17:01 | - |\n')
+            f.write('| S4 | support | Read browser | Paid orders | me | waiting | 2026-11-04 | - |\n')
+            f.write('| S5 | support | Owner approval | Paid orders | me | owner | 2026-11-04 | - |\n')
+        child = os.path.join(self.d, 'trial store')
+        os.mkdir(child)
+        with open(os.path.join(child, 'READINESS.md'), 'w') as f:
+            f.write('| ID | Flow | Status | Due |\n|---|---|---|---|\n'
+                    '| S3 | Read another order | waiting | 2026-11-04 |\n')
+        self.assertEqual(run(P.cmd_due, self.d, 'loop')[1], 'nothing due for loop\n')
+        os.environ['PROCESSES_NOW'] = '2026-11-04T17:01'
+        self.assertIn('P4 Read order | review COMPANY.md S3 | loop', run(P.cmd_due, self.d, 'loop')[1])
+        self.assertIn('due: P4 Read order | runner: loop', run(P.cmd_plan, self.d)[1])
+        _, out = run(P.cmd_due, self.d, 'loop')
+        self.assertNotIn('P5', out)
+        self.assertNotIn('P6', out)
+        self.assertEqual(run(P.cmd_mark, self.d, 'P4', 'failing')[0], 0)
+        self.assertIn('P4', run(P.cmd_due, self.d, 'loop')[1])
+        self.assertEqual(run(P.cmd_mark, self.d, 'P4', 'ok')[0], 0)
+        self.assertEqual(run(P.cmd_due, self.d, 'loop')[1], 'nothing due for loop\n')
+        advanced = slurp(fixture).replace('2026-11-04 17:01', '2026-11-04 17:03')
+        with open(fixture, 'w') as f:
+            f.write(advanced)
+        self.assertEqual(run(P.cmd_due, self.d, 'loop')[1], 'nothing due for loop\n')
+        os.environ['PROCESSES_NOW'] = '2026-11-04T17:03'
+        self.assertIn('P4', run(P.cmd_due, self.d, 'loop')[1])
+        code, out = run(P.cmd_check, self.d)
+        self.assertEqual(code, 0, out)
+        self.assertNotIn('not a cadence', out)
+        processes = slurp(os.path.join(self.d, 'PROCESSES.md'))
+        self.write(processes.replace('COMPANY.md S3', 'trial store/READINESS.md S3')
+                   .replace('2026-11-04 17:01 | ok', '- | new'))
+        self.assertIn('P4', run(P.cmd_due, self.d, 'loop')[1])
+        self.write(processes.replace('COMPANY.md S3', 'COMPANY.md S33'))
+        code, out = run(P.cmd_check, self.d)
+        self.assertEqual(code, 1, out)
+        self.assertIn('missing ledger row: COMPANY.md S33', out)
+
     def test_good_file_due_and_mark(self):
         os.makedirs(os.path.join(self.tasks, 'acme-outreach'))
         open(os.path.join(self.tasks, 'acme-outreach', 'SKILL.md'), 'w').close()

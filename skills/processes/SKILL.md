@@ -29,7 +29,7 @@ A product: 4 to 6 processes, 1 to 3 lanes. A company: 6 to 12 processes, 3 to 5 
 1. `processes.py plan .` lists every due process with its runner, including processes outside lanes, plus buildable rows and dated results to review. Use each process's configured runner and each result's authorized process or session. Record the decision or next check in its ledger row.
 2. The coordinator (the run that owns the ledger and PROCESSES.md) starts those lanes in parallel. Claude Code: one Agent per lane inside the turn, or a session or worktree for a long lane. Codex: one thread or `codex exec` worker per lane. Many folders: the portfolio `tick.sh`. Each lane prompt carries the goal, what its rows serve, its files, the OWNER.md limits and what to hand back (rows updated with evidence).
 3. Due processes before new rows. After each one, check its Done when with the verify loop (verify skill), then `processes.py mark . <ID> ok` (or `failing`). A failing process stops new rows on its lane until it is fixed.
-4. The headless loop runs only `processes.py due . --runner loop`; what needs a browser waits for its task or session.
+4. The headless loop runs only `processes.py due . --runner loop`; what needs a browser waits for its task or session. To dispatch a dated waiting row, set a process's When to `review COMPANY.md S3` (use the exact ledger path and row ID) and set its Runner. It becomes due at the row's date or local time. Mark the process `ok` after the verified read to finish that occurrence, or `failing` to keep it due.
 
 ## 4. Coordination rules
 

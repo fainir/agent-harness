@@ -337,6 +337,49 @@ MD
   PROCESSES_NOW='2026-12-01 00:03' python3 -I "$H/.$runner/skills/processes/scripts/processes.py" mark "$close" P10 ok > "$close/marked"
   check "install: $runner resumes idle after the planner records the close" "grep -q '^P10 marked ok' '$close/marked' && close_run '2026-12-01 00:04' | grep -q '^idle:' && [ \"\$(wc -l < '$close/calls' | tr -d ' ')\" = 3 ]"
 done
+for runner in claude codex; do
+  review="$T/review-$runner"
+  mkdir -p "$review/bin"
+  cat > "$review/bin/$runner" <<'SH'
+#!/bin/sh
+printf 'run\n' >> calls
+if [ -f fail-once ]; then
+  rm fail-once
+  exit 42
+fi
+SH
+  printf '#!/bin/sh\nprintf "unchanged\\n"\n' > "$review/signals.sh"
+  chmod +x "$review/bin/$runner" "$review/signals.sh"
+  cat > "$review/COMPANY.md" <<'MD'
+| ID | Status | Due |
+|---|---|---|
+| S3 | waiting | 2026-11-16 02:17 |
+| S4 | waiting | 2026-11-16 |
+| S5 | waiting | 2026-11-16 |
+| S6 | owner | 2026-11-16 |
+MD
+  cat > "$review/PROCESSES.md" <<'MD'
+## Processes
+
+| ID | Process | When | Runner | How | Done when | Last run | Health |
+|---|---|---|---|---|---|---|---|
+| P3 | Read first order | review COMPANY.md S3 | loop | read provider status | verified | - | new |
+| P4 | Check browser | review COMPANY.md S4 | task:browser | Chrome | read | - | new |
+| P5 | Owner check | review COMPANY.md S5 | owner | read | read | - | new |
+| P6 | Approval is pending | review COMPANY.md S6 | loop | read | read | - | new |
+MD
+  review_run() {
+    HOME="$H" PROCESSES_NOW="$1" PATH="$review/bin:$PATH" RUNNER="$runner" TIMEOUT=30 BUSY_MIN=0 \
+      bash "$H/.$runner/skills/run-company/scripts/run.sh" "$review"
+  }
+  review_run '2026-11-16 02:16' > "$review/first"
+  check "install: $runner idles before the order review despite due browser and owner work" "grep -q 'exit 0' '$review/first' && review_run '2026-11-16 02:16' | grep -q '^idle:'"
+  touch "$review/fail-once"
+  review_run '2026-11-16 02:17' > "$review/failed"
+  check "install: $runner starts a dated order review on unchanged signals and retries failure" "grep -q 'exit 42' '$review/failed' && [ ! -e '$review/.runtime/idle.sig' ] && review_run '2026-11-16 02:18' | grep -q 'exit 0' && [ \"\$(wc -l < '$review/calls' | tr -d ' ')\" = 3 ]"
+  PROCESSES_NOW='2026-11-16 02:18' python3 -I "$H/.$runner/skills/processes/scripts/processes.py" mark "$review" P3 ok > "$review/marked"
+  check "install: $runner idles after a successful dated order review" "grep -q '^P3 marked ok' '$review/marked' && review_run '2026-11-16 02:19' | grep -q '^idle:' && [ \"\$(wc -l < '$review/calls' | tr -d ' ')\" = 3 ]"
+done
 check "install: both tools retain the buyer reach and profit guidance" "cmp -s '$HERE/skills/run-company/SKILL.md' '$H/.codex/skills/run-company/SKILL.md' && cmp -s '$HERE/skills/run-company/SKILL.md' '$H/.claude/skills/run-company/SKILL.md' && grep -Fq 'record demand inconclusive' '$H/.codex/skills/run-company/SKILL.md' && grep -Fq 'Weak reach calls for an approved placement' '$H/.codex/skills/run-company/SKILL.md' && grep -Fq 'purchase rate for the same offer and source' '$H/.claude/skills/run-company/SKILL.md'"
 check "install: one rules block after two installs" "[ \"\$(grep -c 'agent-harness:start' '$H/.claude/CLAUDE.md')\" = 1 ] && grep -q 'my own rules' '$H/.claude/CLAUDE.md'"
 check "install: hooks added once, user hooks kept" "python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1]))[\"hooks\"]; s=json.dumps(d); sys.exit(0 if s.count(\"done-check.py\")==1 and s.count(\"continue-ledger.sh\")==1 and \"my-own-hook.sh\" in s and \"UserPromptSubmit\" in d else 1)' '$H/.claude/settings.json'"
