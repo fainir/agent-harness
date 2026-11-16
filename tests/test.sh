@@ -11,6 +11,7 @@ T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 # 1. Syntax
 for f in "$HERE"/install.sh "$HERE"/hooks/*.sh "$HERE"/skills/*/scripts/*.sh; do check "bash -n $(basename "$f")" "bash -n '$f'"; done
 check "python compiles done-check.py" "python3 -I -m py_compile '$HERE/hooks/done-check.py'"
+check "Claude print capture keeps earlier assistant text and final results" "python3 -I '$HERE/tests/test_claude_print_report.py'"
 
 # 2. reply-budget.sh
 rb() { printf '%s' "$1" | bash "$HERE/hooks/reply-budget.sh"; }

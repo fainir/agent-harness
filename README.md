@@ -59,6 +59,18 @@ Next: app store screenshots, next run in 3 hours
 - **Self-review loop.** Every friction and every owner ask is logged. A weekly review (`learn` skill) follows the propose, probe, compose loop of [Harness²](https://arxiv.org/abs/2610.14224): it picks one recurring cause, proposes up to two fixes, runs the current harness and the candidate side by side on the same real task in offline copies (`probe.sh`, judged blind), and adopts, merges or keeps the base. Kept changes form an experience library (`applied.md`) that later reviews reuse; a change stays only if verified rows hold and owner asks per run go down.
 - **Short answers.** The closing message answers your last message and nothing else; a hook sizes it to what you wrote.
 
+## Read a Claude Code print capture
+
+If a Stop hook asks for a follow-up, save the stream to retain earlier responses as well as the final result.
+
+```bash
+claude -p "Review this diff without editing it" --output-format stream-json --verbose > run.jsonl
+python3 -I examples/claude-print-report.py < run.jsonl
+```
+
+The example emits one JSON line per main-conversation assistant text message or result event. It keeps the result event intact, including its error status. It also accepts a saved JSON event array or single result. Earlier turns are available when they were captured.
+[Claude Code print-mode output](https://code.claude.com/docs/en/headless#stream-responses).
+
 ## Install
 
 ```bash
