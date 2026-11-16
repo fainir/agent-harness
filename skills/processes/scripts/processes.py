@@ -3,7 +3,7 @@
 
 Usage: python3 -I processes.py init  <dir>              write PROCESSES.md from the ledger and the schedules (never overwrites)
        python3 -I processes.py due   <dir> [--runner R] [--all]   processes due now (R: loop, session, agent, owner, task:<id>, ...)
-       python3 -I processes.py mark  <dir> <ID> [ok|late|failing]  record a run: Last run = now, Health
+       python3 -I processes.py mark  <dir> <ID> [ok|late|failing]  record an attempt: Last run = now, Health
        python3 -I processes.py plan  <dir>              dispatch plan, including dated result reviews
        python3 -I processes.py check <dir>              strategy, processes, runners, lanes; exit 1 on a structural problem
        python3 -I processes.py missing                  registered projects with a ledger and no PROCESSES.md
@@ -313,7 +313,9 @@ def process_cadence(pr, t, deadlines):
     last = parse_time(pr['last'])
     review = REVIEW.fullmatch(pr['when'])
     if not review:
-        return cadence(pr['when'], last, t)
+        # Keep the occurrence due after a failure while retaining the attempt timestamp.
+        last_success = None if pr['health'].lower().startswith('failing') else last
+        return cadence(pr['when'], last_success, t)
     deadline = deadlines.get(review.groups())
     if deadline is None or t < deadline:
         return 'review', False, None

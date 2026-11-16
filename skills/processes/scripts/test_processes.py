@@ -209,6 +209,24 @@ class CheckDueMarkPlan(Base):
         code, out = run(P.cmd_due, self.d)
         self.assertNotIn('P2', out)
 
+    def test_calendar_failure_retries_on_next_runner_pass(self):
+        self.write(GOOD.replace('Money close | monthly 1 | session', 'Money close | monthly 1 | loop'))
+        os.environ['PROCESSES_NOW'] = '2026-12-01T00:01'
+        self.assertIn('P3 Money close', run(P.cmd_due, self.d, 'loop')[1])
+        self.assertEqual(run(P.cmd_mark, self.d, 'P3', 'failing')[0], 0)
+        self.assertIn('2026-12-01 00:01 | failing |', slurp(os.path.join(self.d, 'PROCESSES.md')))
+
+        os.environ['PROCESSES_NOW'] = '2026-12-01T03:01'
+        self.assertIn('P3 Money close', run(P.cmd_due, self.d, 'loop')[1])
+        self.assertIn('due: P3 Money close | runner: loop', run(P.cmd_plan, self.d)[1])
+        self.assertNotIn('P3 Money close', run(P.cmd_due, self.d, 'session')[1])
+
+        self.assertEqual(run(P.cmd_mark, self.d, 'P3', 'ok')[0], 0)
+        os.environ['PROCESSES_NOW'] = '2026-12-01T06:01'
+        self.assertNotIn('P3 Money close', run(P.cmd_due, self.d, 'loop')[1])
+        os.environ['PROCESSES_NOW'] = '2027-01-01T00:01'
+        self.assertIn('P3 Money close', run(P.cmd_due, self.d, 'loop')[1])
+
     def test_plan_groups_open_rows_by_lane(self):
         self.write(GOOD)
         code, out = run(P.cmd_plan, self.d)
