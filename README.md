@@ -65,8 +65,10 @@ If a Stop hook asks for a follow-up, save the stream to retain earlier responses
 
 ```bash
 claude -p "Review this diff without editing it" --output-format stream-json --verbose > run.jsonl
-python3 -I examples/claude-print-report.py < run.jsonl
+python3 -I examples/claude-print-report.py run.jsonl
 ```
+
+On Windows, the capture command runs in Command Prompt. Use `py -3 -I examples/claude-print-report.py run.jsonl` to read the file.
 
 The example emits one JSON line per assistant text message marked with `parent_tool_use_id: null` and keeps result events intact, including their error status. It also accepts a saved JSON event array or single result. Earlier turns are available when they were captured.
 [Claude Code print-mode output](https://code.claude.com/docs/en/headless#stream-responses) · [Main-conversation messages](https://code.claude.com/docs/en/headless#follow-subagent-messages).

@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+from tempfile import TemporaryDirectory
 import unittest
 
 
@@ -19,8 +20,8 @@ HANDOFF = {
 RESULT = {"type": "result", "result": "Saved the handoff.", "is_error": False}
 
 
-def run(capture):
-    return subprocess.run([sys.executable, "-I", str(SCRIPT)], input=capture,
+def run(capture, *arguments):
+    return subprocess.run([sys.executable, "-I", str(SCRIPT), *arguments], input=capture,
                           encoding="utf-8", capture_output=True, timeout=10)
 
 
@@ -49,6 +50,16 @@ class PrintReportTest(unittest.TestCase):
         completed = run(json.dumps(failed))
         self.assertEqual(completed.returncode, 0)
         self.assertEqual(json.loads(completed.stdout), failed)
+
+    def test_reads_a_named_capture_with_a_utf8_bom(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "print capture.json"
+            path.write_text(json.dumps([REPORT, RESULT]), encoding="utf-8-sig")
+            completed = run("", str(path))
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual([json.loads(line) for line in completed.stdout.splitlines()], [
+            {"type": "assistant", "text": "One action remains."}, RESULT,
+        ])
 
     def test_corrupt_capture_does_not_output_a_partial_report(self):
         completed = run(json.dumps(REPORT) + '\n{"type":')

@@ -1,6 +1,8 @@
-"""Read saved Claude Code print output from stdin and emit report events as JSONL."""
+"""Read saved Claude Code print output and emit report events as JSONL."""
 
+import argparse
 import json
+from pathlib import Path
 import re
 import sys
 
@@ -37,9 +39,13 @@ def report_events(capture):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("capture", type=Path, nargs="?", help="UTF-8 capture file (defaults to stdin)")
+    args = parser.parse_args()
     try:
-        output = list(report_events(sys.stdin.buffer.read().decode("utf-8-sig")))
-    except ValueError as error:
+        capture = args.capture.read_bytes() if args.capture else sys.stdin.buffer.read()
+        output = list(report_events(capture.decode("utf-8-sig")))
+    except (OSError, ValueError) as error:
         sys.exit(f"Invalid Claude Code capture: {error}")
     for record in output:
         print(json.dumps(record))
