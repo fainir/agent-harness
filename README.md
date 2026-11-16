@@ -59,6 +59,15 @@ Next: app store screenshots, next run in 3 hours
 - **Self-review loop.** Every friction and every owner ask is logged. A weekly review (`learn` skill) follows the propose, probe, compose loop of [Harness²](https://arxiv.org/abs/2610.14224): it picks one recurring cause, proposes up to two fixes, runs the current harness and the candidate side by side on the same real task in offline copies (`probe.sh`, judged blind), and adopts, merges or keeps the base. Kept changes form an experience library (`applied.md`) that later reviews reuse; a change stays only if verified rows hold and owner asks per run go down.
 - **Short answers.** The closing message answers your last message and nothing else; a hook sizes it to what you wrote.
 
+## Save a release handoff
+
+When a release spans sessions, keep the result, its evidence and one next check together.
+After running the Verify skill, record what passed, where to see the proof and when to check again.
+
+Try it in [the Launch notes sample](https://plainer.app/try?start=launch-notes) in Plainer, my notes and planning app. Open it as a guest, add one line such as “Checked the live pricing page on a phone. Review checkout in two days,” and reload. The edit stays in this browser.
+
+Notes and planning are free. If you want a personal allowance for Plainer's built-in assistant, [compare Free and Pro](https://plainer.app/pricing/from-agent-harness). The 14-day Pro trial requires a card and renews unless you cancel.
+
 ## Read a Claude Code print capture
 
 If a Stop hook asks for a follow-up, save the stream to retain earlier responses as well as the final result.
