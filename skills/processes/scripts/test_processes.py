@@ -351,6 +351,37 @@ class CheckDueMarkPlan(Base):
         self.assertIn('FAIL strategy has no "Review by" line', out)
         self.assertIn('P1 runs on loop, but no schedule runs this folder', out)
 
+    def test_build_loop_check_distinguishes_runner_attempts_from_recorded_work(self):
+        with open(os.path.join(self.agents, 'com.harness.acme.plist'), 'wb') as f:
+            plistlib.dump({'ProgramArguments': ['/bin/bash', 'run.sh', self.d], 'StartInterval': 10800}, f)
+        self.write(GOOD.replace('every run | session | money/ledger.md | a row verified | 2026-11-04 16:00',
+                                'every 3h | loop | money/ledger.md | a row verified | 2026-11-04 07:00')
+                       .replace('monthly 1 | session | money/ledger.md | closed | 2026-11-01 09:00',
+                                'every 3h | loop | money/ledger.md | closed | 2026-11-04 07:00'))
+        runs = os.path.join(self.d, '.runtime', 'runs')
+        os.makedirs(runs)
+        log = os.path.join(runs, 'summary.log')
+        self.assertIn('WARN P1 is late', run(P.cmd_check, self.d)[1])
+        for outcome, expected in (
+            ('idle: no buildable row and no change, model not run', 'NOTE P1 runner checked at 2026-11-04 16:45 and reported idle'),
+            ('busy: COMPANY.md changed', 'WARN P1 runner checked at 2026-11-04 16:45 and skipped while busy'),
+            ('codex exit 1 .runtime/runs/latest.log', 'WARN P1 runner checked at 2026-11-04 16:45 and reported codex exit 1'),
+            ('claude exit 0 .runtime/runs/latest.log', 'NOTE P1 runner checked at 2026-11-04 16:45 and reported claude exit 0'),
+        ):
+            with self.subTest(outcome=outcome):
+                with open(log, 'w') as f:
+                    f.write('20261104-1645 COMPANY.md %s\n' % outcome)
+                    f.write('20261104-1701 COMPANY.md idle: future timestamp\n')
+                code, out = run(P.cmd_check, self.d)
+                self.assertEqual(code, 0, out)
+                self.assertIn(expected, out)
+                self.assertIn('last recorded run 2026-11-04 07:00', out)
+                self.assertNotIn('WARN P1 is late', out)
+                self.assertIn('WARN P3 is late', out)
+        with open(log, 'w') as f:
+            f.write('20261104-1000 COMPANY.md idle: old check\ninvalid record\n')
+        self.assertIn('WARN P1 is late', run(P.cmd_check, self.d)[1])
+
     def test_no_file(self):
         code, out = run(P.cmd_check, self.d)
         self.assertEqual(code, 1)

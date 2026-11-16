@@ -23,6 +23,8 @@ STRATEGY_KEYS = ('Diagnosis', 'Guiding policy', 'Coherent actions', 'Feasible be
 DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
 OPEN = ('todo', 'building', 'defect', 'open', 'new')
 REVIEW = re.compile(r'review (.+) ([A-Z][A-Za-z]*\d+[a-z]?)')
+LOOP_CHECK = re.compile(r'^(\d{8}-\d{4}) (?:' + '|'.join(map(re.escape, LEDGERS))
+                        + r') (idle:|busy:|(?:codex|claude) exit \d+(?!\S))')
 
 
 def now():
@@ -221,6 +223,23 @@ def loop_scheduled(d):
     except Exception:
         cron = ''
     return 'cron' if d in cron else None
+
+
+def last_loop_check(d, earliest, latest):
+    """Return the newest recorded wrapper outcome in the cadence window."""
+    result = None
+    for line in read(os.path.join(d, '.runtime', 'runs', 'summary.log')).splitlines():
+        match = LOOP_CHECK.match(line)
+        if not match:
+            continue
+        stamp, outcome = match.groups()
+        try:
+            when = dt.datetime.strptime(stamp, '%Y%m%d-%H%M')
+        except ValueError:
+            continue
+        if earliest <= when <= latest and (result is None or when >= result[0]):
+            result = when, outcome
+    return result
 
 
 def desktop_tasks(d):
@@ -435,7 +454,7 @@ def cmd_plan(d):
 
 
 def cmd_check(d):
-    model, fails, warns = load(d), [], []
+    model, fails, warns, notes = load(d), [], [], []
     if not model:
         print('FAIL no PROCESSES.md in %s: run init' % d)
         return 1
@@ -484,7 +503,22 @@ def cmd_check(d):
             warns.append('%s When "%s" is not a cadence this script reads (every run, hourly, every 3h, daily 16:30, weekly sun, monthly 1, on <event>)' % (pr['id'], pr['when']))
         last = parse_time(pr['last'])
         if period and last and t - last > 2 * period:
-            warns.append('%s is late: last run %s, cadence %s' % (pr['id'], pr['last'], pr['when']))
+            attempt = None
+            if loop and 'loop' in parts and pr['name'].partition(':')[0].strip().lower() == 'build loop':
+                attempt = last_loop_check(d, t - 2 * period, t)
+            if attempt is None:
+                warns.append('%s is late: last run %s, cadence %s' % (pr['id'], pr['last'], pr['when']))
+            else:
+                when, outcome = attempt
+                if outcome == 'busy:':
+                    status, findings = 'skipped while busy', warns
+                elif outcome == 'idle:':
+                    status, findings = 'reported idle', notes
+                else:
+                    status = 'reported ' + outcome
+                    findings = notes if outcome.endswith(' exit 0') else warns
+                findings.append(f"{pr['id']} runner checked at {when:%Y-%m-%d %H:%M} and {status} "
+                                f"(last recorded run {pr['last']}, cadence {pr['when']})")
         if pr['health'].lower().startswith('failing'):
             warns.append('%s is failing: fix its How before more rows on its lane' % pr['id'])
         if not how_exists(pr['how'], d):
@@ -496,6 +530,8 @@ def cmd_check(d):
         warns.append('PROCESSES.md is %d lines; keep it under 150 (move long steps into the files the How column names)' % n)
     for x in fails:
         print('FAIL ' + x)
+    for x in notes:
+        print('NOTE ' + x)
     for x in warns:
         print('WARN ' + x)
     if not fails and not warns:
