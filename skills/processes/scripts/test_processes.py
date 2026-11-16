@@ -142,6 +142,51 @@ GOOD = """# Acme - how we work
 
 
 class CheckDueMarkPlan(Base):
+    def test_dated_review_uses_exact_ledger_row_time_runner_and_success(self):
+        self.write(GOOD.replace('\n## Lanes',
+                               '| P4 | Read order | review COMPANY.md S3 | loop | money/ledger.md | read | - | new |\n'
+                               '| P5 | Read browser | review COMPANY.md S4 | session | money/ledger.md | read | - | new |\n'
+                               '| P6 | Read owner | review COMPANY.md S5 | loop | money/ledger.md | read | - | new |\n'
+                               '\n## Lanes'))
+        fixture = os.path.join(self.d, 'COMPANY.md')
+        with open(fixture, 'a') as f:
+            f.write('| S3 | support | Read first order | Paid orders | me | waiting | 2026-11-04 17:01 | - |\n')
+            f.write('| S4 | support | Read browser | Paid orders | me | waiting | 2026-11-04 | - |\n')
+            f.write('| S5 | support | Owner approval | Paid orders | me | owner | 2026-11-04 | - |\n')
+        child = os.path.join(self.d, 'trial store')
+        os.mkdir(child)
+        with open(os.path.join(child, 'READINESS.md'), 'w') as f:
+            f.write('| ID | Flow | Status | Due |\n|---|---|---|---|\n'
+                    '| S3 | Read another order | waiting | 2026-11-04 |\n')
+        self.assertEqual(run(P.cmd_due, self.d, 'loop')[1], 'nothing due for loop\n')
+        os.environ['PROCESSES_NOW'] = '2026-11-04T17:01'
+        self.assertIn('P4 Read order | review COMPANY.md S3 | loop', run(P.cmd_due, self.d, 'loop')[1])
+        self.assertIn('due: P4 Read order | runner: loop', run(P.cmd_plan, self.d)[1])
+        _, out = run(P.cmd_due, self.d, 'loop')
+        self.assertNotIn('P5', out)
+        self.assertNotIn('P6', out)
+        self.assertEqual(run(P.cmd_mark, self.d, 'P4', 'failing')[0], 0)
+        self.assertIn('P4', run(P.cmd_due, self.d, 'loop')[1])
+        self.assertEqual(run(P.cmd_mark, self.d, 'P4', 'ok')[0], 0)
+        self.assertEqual(run(P.cmd_due, self.d, 'loop')[1], 'nothing due for loop\n')
+        advanced = slurp(fixture).replace('2026-11-04 17:01', '2026-11-04 17:03')
+        with open(fixture, 'w') as f:
+            f.write(advanced)
+        self.assertEqual(run(P.cmd_due, self.d, 'loop')[1], 'nothing due for loop\n')
+        os.environ['PROCESSES_NOW'] = '2026-11-04T17:03'
+        self.assertIn('P4', run(P.cmd_due, self.d, 'loop')[1])
+        code, out = run(P.cmd_check, self.d)
+        self.assertEqual(code, 0, out)
+        self.assertNotIn('not a cadence', out)
+        processes = slurp(os.path.join(self.d, 'PROCESSES.md'))
+        self.write(processes.replace('COMPANY.md S3', 'trial store/READINESS.md S3')
+                   .replace('2026-11-04 17:01 | ok', '- | new'))
+        self.assertIn('P4', run(P.cmd_due, self.d, 'loop')[1])
+        self.write(processes.replace('COMPANY.md S3', 'COMPANY.md S33'))
+        code, out = run(P.cmd_check, self.d)
+        self.assertEqual(code, 1, out)
+        self.assertIn('missing ledger row: COMPANY.md S33', out)
+
     def test_good_file_due_and_mark(self):
         os.makedirs(os.path.join(self.tasks, 'acme-outreach'))
         open(os.path.join(self.tasks, 'acme-outreach', 'SKILL.md'), 'w').close()
@@ -163,6 +208,24 @@ class CheckDueMarkPlan(Base):
         self.assertIn('| A build |', text)  # the rest of the file is kept
         code, out = run(P.cmd_due, self.d)
         self.assertNotIn('P2', out)
+
+    def test_calendar_failure_retries_on_next_runner_pass(self):
+        self.write(GOOD.replace('Money close | monthly 1 | session', 'Money close | monthly 1 | loop'))
+        os.environ['PROCESSES_NOW'] = '2026-12-01T00:01'
+        self.assertIn('P3 Money close', run(P.cmd_due, self.d, 'loop')[1])
+        self.assertEqual(run(P.cmd_mark, self.d, 'P3', 'failing')[0], 0)
+        self.assertIn('2026-12-01 00:01 | failing |', slurp(os.path.join(self.d, 'PROCESSES.md')))
+
+        os.environ['PROCESSES_NOW'] = '2026-12-01T03:01'
+        self.assertIn('P3 Money close', run(P.cmd_due, self.d, 'loop')[1])
+        self.assertIn('due: P3 Money close | runner: loop', run(P.cmd_plan, self.d)[1])
+        self.assertNotIn('P3 Money close', run(P.cmd_due, self.d, 'session')[1])
+
+        self.assertEqual(run(P.cmd_mark, self.d, 'P3', 'ok')[0], 0)
+        os.environ['PROCESSES_NOW'] = '2026-12-01T06:01'
+        self.assertNotIn('P3 Money close', run(P.cmd_due, self.d, 'loop')[1])
+        os.environ['PROCESSES_NOW'] = '2027-01-01T00:01'
+        self.assertIn('P3 Money close', run(P.cmd_due, self.d, 'loop')[1])
 
     def test_plan_groups_open_rows_by_lane(self):
         self.write(GOOD)
@@ -287,6 +350,37 @@ class CheckDueMarkPlan(Base):
         self.assertEqual(code, 1)
         self.assertIn('FAIL strategy has no "Review by" line', out)
         self.assertIn('P1 runs on loop, but no schedule runs this folder', out)
+
+    def test_build_loop_check_distinguishes_runner_attempts_from_recorded_work(self):
+        with open(os.path.join(self.agents, 'com.harness.acme.plist'), 'wb') as f:
+            plistlib.dump({'ProgramArguments': ['/bin/bash', 'run.sh', self.d], 'StartInterval': 10800}, f)
+        self.write(GOOD.replace('every run | session | money/ledger.md | a row verified | 2026-11-04 16:00',
+                                'every 3h | loop | money/ledger.md | a row verified | 2026-11-04 07:00')
+                       .replace('monthly 1 | session | money/ledger.md | closed | 2026-11-01 09:00',
+                                'every 3h | loop | money/ledger.md | closed | 2026-11-04 07:00'))
+        runs = os.path.join(self.d, '.runtime', 'runs')
+        os.makedirs(runs)
+        log = os.path.join(runs, 'summary.log')
+        self.assertIn('WARN P1 is late', run(P.cmd_check, self.d)[1])
+        for outcome, expected in (
+            ('idle: no buildable row and no change, model not run', 'NOTE P1 runner checked at 2026-11-04 16:45 and reported idle'),
+            ('busy: COMPANY.md changed', 'WARN P1 runner checked at 2026-11-04 16:45 and skipped while busy'),
+            ('codex exit 1 .runtime/runs/latest.log', 'WARN P1 runner checked at 2026-11-04 16:45 and reported codex exit 1'),
+            ('claude exit 0 .runtime/runs/latest.log', 'NOTE P1 runner checked at 2026-11-04 16:45 and reported claude exit 0'),
+        ):
+            with self.subTest(outcome=outcome):
+                with open(log, 'w') as f:
+                    f.write('20261104-1645 COMPANY.md %s\n' % outcome)
+                    f.write('20261104-1701 COMPANY.md idle: future timestamp\n')
+                code, out = run(P.cmd_check, self.d)
+                self.assertEqual(code, 0, out)
+                self.assertIn(expected, out)
+                self.assertIn('last recorded run 2026-11-04 07:00', out)
+                self.assertNotIn('WARN P1 is late', out)
+                self.assertIn('WARN P3 is late', out)
+        with open(log, 'w') as f:
+            f.write('20261104-1000 COMPANY.md idle: old check\ninvalid record\n')
+        self.assertIn('WARN P1 is late', run(P.cmd_check, self.d)[1])
 
     def test_no_file(self):
         code, out = run(P.cmd_check, self.d)

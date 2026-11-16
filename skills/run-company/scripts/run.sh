@@ -51,7 +51,7 @@ has_due_calendar_work() {
   # The due report already filters by runner. Skip relative intervals (including the coordinator's cadence)
   # and checks that run whenever the coordinator starts.
   python3 -I "$planner" due . --runner loop 2>/dev/null | awk -F '[|]' '
-    tolower($2) ~ /^[[:space:]]*(daily|every day|weekdays|weekly|monthly)([[:space:]]|$)/ { due = 1 }
+    tolower($2) ~ /^[[:space:]]*(daily|every day|weekdays|weekly|monthly|review)([[:space:]]|$)/ { due = 1 }
     END { exit !due }
   '
 }
