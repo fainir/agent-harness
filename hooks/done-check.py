@@ -3,7 +3,7 @@
 
 Lets a turn end when its last message shows finished or owner-blocked work (a NEEDS YOU line,
 "Goal condition met", "no change", or a brief reply in a clean working tree). Common first-person
-work promises go to the low-effort judge (claude haiku or codex), even when brief. The judge reads the
+work promises and unfinished-work admissions go to the judge, even when brief. The judge reads the
 last request and reply and answers DONE or CONTINUE. CONTINUE becomes the next turn's prompt.
 The stop_hook_active guard limits this to one continuation per turn. A judge failure lets the turn end.
 
@@ -131,7 +131,12 @@ promises_work = re.search(
     r"(?:i(?:['’]m|\s+am)|we(?:['’]re|\s+are))\s+going\s+to)\s+",
     low,
 )
-if short_turn and dirty in ("clean", "not a git repo") and not promises_work:
+admits_unfinished = re.search(
+    r"\b(?:i|we)\s+(?:(?:did\s+not|didn['’]t)\s+(?:finish|complete)|"
+    r"(?:have\s+not|haven['’]t)\s+(?:finished|completed))\b",
+    low,
+)
+if short_turn and dirty in ("clean", "not a git repo") and not (promises_work or admits_unfinished):
     out({})  # a short request answered briefly with nothing changed on disk
 verdict = ask_judge(
     "You are a done-check judge for a coding agent. Reply with exactly one line: DONE, or CONTINUE: <one sentence "
