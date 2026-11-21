@@ -29,6 +29,8 @@ A passing trial exits with status 0 and ends with a failure count of zero.
 The trial checkout is available at `$trial_dir/agent-harness`.
 [Install agent-harness](#install) to use it in your agent.
 
+After installation, try one reversible task in a disposable copy of a repository. Write down the expected result, how you’ll verify it, and any decision you need to approve. Compare the closing report with the actual result before using the harness on a release.
+
 Once installed, every big job ends with a report in the same shape (format from the
 `run-company` skill):
 
