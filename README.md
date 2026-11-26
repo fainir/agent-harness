@@ -101,6 +101,10 @@ The installer links shared skills into `~/.agents/skills` and the selected tools
 
 Other agents: point them at `~/.agents/skills` and paste `rules/harness.md` into their `AGENTS.md` or system prompt.
 
+### Get help setting up one workflow
+
+[Request a free setup review](https://aiyourwork.chat/services?utm_source=github&utm_medium=readme&utm_campaign=agent-harness-setup#implementation-request) for one repository. Share the coding agent you use, a recurring task and what someone should verify when it finishes. We agree on scope and price before any paid implementation.
+
 ## Layout
 
 - `skills/` - `ship`, `production-ready`, `product-spec`, `ux-ui-review`, `qa-flows`, `release-gates`, `owner-actions`, `run-company`, `portfolio`, `hire`, `learn`. Each is a `SKILL.md` plus scripts and templates.
